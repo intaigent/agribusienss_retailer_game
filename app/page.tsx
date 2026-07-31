@@ -45,14 +45,26 @@ type Dialogue =
   | { kind: "clue"; speaker: string; icon: string; text: string }
   | { kind: "prompt"; speaker: string; icon: string; text: string }
   | { kind: "decision" }
-  | { kind: "outcome"; choice: Choice };
+  | { kind: "outcome"; choice: Choice; before: Metrics; after: Metrics };
 
 type Result = {
   stageTitle: string;
+  stageDay: string;
   decision: string;
   fieldGuide: string;
+  consequence: string;
+  before: Metrics;
+  after: Metrics;
   skill: number;
 };
+
+type MetricKey = keyof Metrics;
+
+const METRIC_DETAILS: Array<{ key: MetricKey; icon: string; label: string }> = [
+  { key: "cash", icon: "🪙", label: "Capital" },
+  { key: "readiness", icon: "📦", label: "Readiness" },
+  { key: "trust", icon: "💚", label: "Farmer trust" },
+];
 
 const INITIAL_METRICS: Metrics = { cash: 4800000, readiness: 52, trust: 70 };
 const START_POSITION = { x: 50, y: 78 };
@@ -96,8 +108,8 @@ const STAGES: Stage[] = [
         id: "supplier",
         label: "Call supplier",
         icon: "☎️",
-        x: 25,
-        y: 40,
+        x: 43,
+        y: 47,
         speaker: "Musa · distributor in Arusha",
         text: "Transport is TSh 320,000 per delivery. I can reserve a second shipment if you pay a 10% deposit today.",
       },
@@ -161,7 +173,7 @@ const STAGES: Stage[] = [
         id: "credit-ledger",
         label: "Check ledger",
         icon: "📒",
-        x: 29,
+        x: 43,
         y: 45,
         speaker: "Customer credit ledger",
         text: "Rehema repaid two smaller balances on time. This request is almost twice as large as her last credit purchase.",
@@ -262,7 +274,7 @@ const STAGES: Stage[] = [
         id: "consultant",
         label: "Call consultant",
         icon: "📞",
-        x: 25,
+        x: 43,
         y: 40,
         speaker: "Baraka · BLF agri-consultant",
         text: "Send field photos and confirm the diagnosis. If treatment is needed, use a registered product and explain safe handling and disposal.",
@@ -320,6 +332,21 @@ const formatCash = (amount: number) => {
   return `${sign}TSh ${Math.round(absolute / 1000)}k`;
 };
 
+const metricDelta = (before: Metrics, after: Metrics, key: MetricKey) =>
+  after[key] - before[key];
+
+const formatMetricValue = (key: MetricKey, value: number) =>
+  key === "cash" ? formatCash(value) : `${value}%`;
+
+const formatMetricDelta = (key: MetricKey, value: number) => {
+  if (value === 0) return "No change";
+  if (key === "cash") return `${value > 0 ? "+" : ""}${formatCash(value)}`;
+  return `${value > 0 ? "+" : ""}${value} pts`;
+};
+
+const impactClass = (value: number) =>
+  value > 0 ? "impact-positive" : value < 0 ? "impact-negative" : "impact-neutral";
+
 export default function Home() {
   const [screen, setScreen] = useState<"title" | "game" | "end">("title");
   const [stageIndex, setStageIndex] = useState(0);
@@ -330,6 +357,7 @@ export default function Home() {
   const [results, setResults] = useState<Result[]>([]);
   const [soundOn, setSoundOn] = useState(true);
   const audioRef = useRef<AudioContext | null>(null);
+  const mapStageRef = useRef<HTMLDivElement | null>(null);
 
   const stage = STAGES[stageIndex];
   const progress = Math.round((stageIndex / STAGES.length) * 100);
@@ -464,6 +492,12 @@ export default function Home() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [dialogue?.kind, interactWithNearest, movePlayer, screen]);
 
+  useEffect(() => {
+    if (screen === "end" && mapStageRef.current) {
+      mapStageRef.current.scrollTop = 0;
+    }
+  }, [screen]);
+
   const nearestLabel = useMemo(() => {
     if (dialogue || screen !== "game") return "";
     const targets = [
@@ -478,21 +512,27 @@ export default function Home() {
 
   const choose = (choice: Choice) => {
     playTone(choice.skill === 3 ? 880 : 360, 0.14);
-    setMetrics((current) => ({
-      cash: Math.max(0, current.cash + choice.effects.cash),
-      readiness: clampPercent(current.readiness + choice.effects.readiness),
-      trust: clampPercent(current.trust + choice.effects.trust),
-    }));
+    const before = metrics;
+    const after = {
+      cash: Math.max(0, before.cash + choice.effects.cash),
+      readiness: clampPercent(before.readiness + choice.effects.readiness),
+      trust: clampPercent(before.trust + choice.effects.trust),
+    };
+    setMetrics(after);
     setResults((current) => [
       ...current,
       {
         stageTitle: stage.title,
+        stageDay: stage.day.replace(/^\w+ · /, ""),
         decision: choice.label,
         fieldGuide: choice.fieldGuide,
+        consequence: choice.consequence,
+        before,
+        after,
         skill: choice.skill,
       },
     ]);
-    setDialogue({ kind: "outcome", choice });
+    setDialogue({ kind: "outcome", choice, before, after });
   };
 
   const advance = () => {
@@ -536,6 +576,7 @@ export default function Home() {
   };
 
   const totalSkill = results.reduce((sum, result) => sum + result.skill, 0);
+  const latestResult = results[results.length - 1];
   const weakestResult = results.reduce<Result | null>(
     (weakest, result) => (!weakest || result.skill < weakest.skill ? result : weakest),
     null,
@@ -563,7 +604,7 @@ export default function Home() {
   return (
     <main className="game-page">
       <section className="game-frame" aria-label="Better Life Farming retailer game">
-        <div className={`map-stage weather-${stageIndex}`}>
+        <div ref={mapStageRef} className={`map-stage weather-${stageIndex}`}>
           <div className="sun-glow" aria-hidden="true" />
           <div className="drifting-cloud cloud-one" aria-hidden="true" />
           <div className="drifting-cloud cloud-two" aria-hidden="true" />
@@ -577,9 +618,24 @@ export default function Home() {
                   <span>{stage.weather}</span>
                 </div>
                 <div className="hud-stats" aria-label="Centre status">
-                  <span title="Available capital">🪙 {formatCash(metrics.cash)}</span>
-                  <span title="Season readiness">📦 {metrics.readiness}%</span>
-                  <span title="Farmer trust">💚 {metrics.trust}%</span>
+                  {METRIC_DETAILS.map((metric) => {
+                    const change = latestResult
+                      ? metricDelta(latestResult.before, latestResult.after, metric.key)
+                      : 0;
+                    return (
+                      <span className="hud-stat" title={metric.label} key={metric.key}>
+                        <span>{metric.icon} {formatMetricValue(metric.key, metrics[metric.key])}</span>
+                        {latestResult && (
+                          <em
+                            key={`${results.length}-${metric.key}`}
+                            className={impactClass(change)}
+                          >
+                            {formatMetricDelta(metric.key, change)}
+                          </em>
+                        )}
+                      </span>
+                    );
+                  })}
                 </div>
                 <button
                   className="icon-button"
@@ -602,12 +658,17 @@ export default function Home() {
                 <div className="quest-progress" aria-label={`${progress}% season complete`}>
                   <span style={{ width: `${progress}%` }} />
                 </div>
-                <span className="evidence-label">Evidence to gather</span>
+                <span className="evidence-label">
+                  Evidence to gather <small>Choose any 2</small>
+                </span>
                 <ul>
                   {stage.hotspots.map((hotspot) => (
                     <li key={hotspot.id} className={cluesFound.includes(hotspot.id) ? "done" : ""}>
-                      <span>{cluesFound.includes(hotspot.id) ? "✓" : "○"}</span>
-                      {hotspot.label}
+                      <button type="button" onClick={() => openHotspot(hotspot)}>
+                        <span>{cluesFound.includes(hotspot.id) ? "✓" : "○"}</span>
+                        <span>{hotspot.label}</span>
+                        <small>{cluesFound.includes(hotspot.id) ? "Review" : "Open →"}</small>
+                      </button>
                     </li>
                   ))}
                 </ul>
@@ -621,6 +682,39 @@ export default function Home() {
                   <span><strong>ALP Coach</strong><small>Get a nudge, not the answer</small></span>
                 </button>
               </aside>
+
+              {results.length > 0 && (
+                <aside className="decision-trail pixel-panel" aria-label="Your decision trail">
+                  <div className="trail-heading">
+                    <span>
+                      <span className="eyebrow">Your decision trail</span>
+                      <strong>Season impact</strong>
+                    </span>
+                    <b>{results.length}/{STAGES.length}</b>
+                  </div>
+                  <div className="trail-list">
+                    {results.map((result, index) => (
+                      <article className="trail-item" key={result.stageTitle}>
+                        <div className="trail-number">{index + 1}</div>
+                        <div>
+                          <span className="trail-day">{result.stageDay}</span>
+                          <strong>{result.decision}</strong>
+                          <div className="mini-impact-row">
+                            {METRIC_DETAILS.map((metric) => {
+                              const change = metricDelta(result.before, result.after, metric.key);
+                              return (
+                                <span className={impactClass(change)} key={metric.key}>
+                                  {metric.icon} {formatMetricDelta(metric.key, change)}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </aside>
+              )}
 
               {stage.hotspots.map((hotspot) => (
                 <button
@@ -709,14 +803,33 @@ export default function Home() {
                       <div className="dialogue-heading">
                         <span className="portrait">🌱</span>
                         <div>
-                          <span className="eyebrow">What happened next</span>
-                          <p>{dialogue.choice.consequence}</p>
+                          <span className="eyebrow">Decision {stageIndex + 1} of {STAGES.length} recorded</span>
+                          <h2>Your Centre changed</h2>
                         </div>
                       </div>
-                      <div className="impact-row" aria-label="Decision impact">
-                        <span>🪙 {dialogue.choice.effects.cash > 0 ? "+" : ""}{formatCash(dialogue.choice.effects.cash)}</span>
-                        <span>📦 {dialogue.choice.effects.readiness > 0 ? "+" : ""}{dialogue.choice.effects.readiness}</span>
-                        <span>💚 {dialogue.choice.effects.trust > 0 ? "+" : ""}{dialogue.choice.effects.trust}</span>
+                      <div className="choice-recap">
+                        <span>Your choice</span>
+                        <strong>{dialogue.choice.label}</strong>
+                      </div>
+                      <div className="metric-change-grid" aria-label="Before and after decision impact">
+                        {METRIC_DETAILS.map((metric) => {
+                          const change = metricDelta(dialogue.before, dialogue.after, metric.key);
+                          return (
+                            <div className={`metric-change-card ${impactClass(change)}`} key={metric.key}>
+                              <span className="metric-change-label">{metric.icon} {metric.label}</span>
+                              <div className="metric-values">
+                                <span><small>Before</small><strong>{formatMetricValue(metric.key, dialogue.before[metric.key])}</strong></span>
+                                <b aria-hidden="true">→</b>
+                                <span><small>Now</small><strong>{formatMetricValue(metric.key, dialogue.after[metric.key])}</strong></span>
+                              </div>
+                              <em>{formatMetricDelta(metric.key, change)}</em>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div className="story-impact">
+                        <span className="eyebrow">What happened next</span>
+                        <p>{dialogue.choice.consequence}</p>
                       </div>
                       <div className="field-note">
                         <span className="eyebrow">ALP field guide · {dialogue.choice.fieldGuide}</span>
@@ -792,17 +905,35 @@ export default function Home() {
                   <div><span>Farmer trust</span><strong>{metrics.trust}%</strong></div>
                 </div>
                 <div className="season-log">
-                  {results.map((result, index) => (
+                  {results.map((result) => (
                     <div key={result.stageTitle}>
-                      <span className="log-day">{index === 0 ? "2 Oct" : index === 1 ? "9 Oct" : "13 Oct"}</span>
+                      <span className="log-day">{result.stageDay}</span>
                       <div>
                         <strong>{result.decision}</strong>
                         <span>{result.fieldGuide} unlocked</span>
+                        <p className="log-consequence">{result.consequence}</p>
+                        <div className="mini-impact-row season-impact-row">
+                          {METRIC_DETAILS.map((metric) => {
+                            const change = metricDelta(result.before, result.after, metric.key);
+                            return (
+                              <span className={impactClass(change)} key={metric.key}>
+                                {metric.icon} {formatMetricDelta(metric.key, change)}
+                              </span>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
                   ))}
                 </div>
-                {weakestResult && (
+                {totalSkill === STAGES.length * 3 ? (
+                  <div className="coach-note">
+                    <span className="eyebrow">Coach&apos;s reflection</span>
+                    <p>
+                      Strong season. Which decision required the hardest trade-off—and what evidence gave you confidence?
+                    </p>
+                  </div>
+                ) : weakestResult && (
                   <div className="coach-note">
                     <span className="eyebrow">Coach&apos;s question</span>
                     <p>

@@ -23,6 +23,18 @@ test("starts every day with the request and keeps ALP Coach available", async ()
   assert.match(page, /Let me investigate/);
   assert.match(page, /Get a nudge, not the answer/);
   assert.match(page, /Decision ready/);
+  assert.match(page, /Choose any 2/);
+  assert.match(page, /Open →/);
+});
+
+test("shows the cumulative impact of every decision", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+
+  assert.match(page, /Your decision trail/);
+  assert.match(page, /Before and after decision impact/);
+  assert.match(page, /Your Centre changed/);
+  assert.match(page, /formatMetricDelta/);
+  assert.match(page, /Season impact/);
 });
 
 test("is a standard Next.js project ready for Vercel", async () => {

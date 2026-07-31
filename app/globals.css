@@ -54,7 +54,7 @@ button:focus-visible {
 }
 
 .game-frame {
-  width: min(100%, 1500px);
+  width: min(100%, 1500px, calc((100svh - 24px) * 1.5));
   aspect-ratio: 3 / 2;
   position: relative;
   overflow: hidden;
@@ -199,10 +199,42 @@ button:focus-visible {
   color: var(--rust);
 }
 
-.hud-stats span {
+.hud-stats > .hud-stat {
+  display: grid;
+  gap: 1px;
   padding: 5px 8px;
   border: 2px solid rgba(53, 34, 25, 0.23);
   background: rgba(255, 255, 255, 0.34);
+}
+
+.hud-stat > span {
+  white-space: nowrap;
+}
+
+.hud-stat em {
+  width: fit-content;
+  padding: 1px 4px;
+  border-radius: 2px;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.58rem;
+  font-style: normal;
+  line-height: 1.2;
+  animation: impact-pop 420ms steps(4) both;
+}
+
+.impact-positive {
+  color: #1f5a2d;
+  background: #d9edbd;
+}
+
+.impact-negative {
+  color: #7c3425;
+  background: #f4d09d;
+}
+
+.impact-neutral {
+  color: #675443;
+  background: #e8dcc0;
 }
 
 .icon-button {
@@ -275,6 +307,20 @@ button:focus-visible {
   text-transform: uppercase;
 }
 
+.evidence-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.evidence-label small {
+  color: var(--brown);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.58rem;
+  letter-spacing: 0;
+}
+
 .request-brief p {
   font-size: 0.78rem;
 }
@@ -304,12 +350,40 @@ button:focus-visible {
 }
 
 .quest-card li {
-  display: flex;
+  display: block;
+}
+
+.quest-card li button {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
   gap: 6px;
+  padding: 4px 3px;
+  cursor: pointer;
+  border: 0;
+  border-bottom: 1px dashed rgba(53, 34, 25, 0.2);
+  background: transparent;
+  text-align: left;
+}
+
+.quest-card li button:hover,
+.quest-card li button:focus-visible {
+  color: var(--green);
+  background: rgba(104, 169, 71, 0.12);
+}
+
+.quest-card li button small {
+  color: var(--rust);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.58rem;
 }
 
 .quest-card li.done {
   color: var(--green);
+}
+
+.quest-card li.done button > span:nth-child(2) {
   text-decoration: line-through;
 }
 
@@ -362,6 +436,101 @@ button:focus-visible {
 .coach-button:active {
   transform: translateY(2px);
   box-shadow: 0 1px 0 var(--brown-dark);
+}
+
+.decision-trail {
+  position: absolute;
+  z-index: 12;
+  top: 86px;
+  right: 14px;
+  width: min(292px, 27%);
+  max-height: calc(100% - 172px);
+  padding: 12px;
+  overflow: auto;
+  animation: trail-enter 380ms steps(5) both;
+}
+
+.trail-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid rgba(53, 34, 25, 0.28);
+}
+
+.trail-heading > span {
+  display: grid;
+  gap: 2px;
+}
+
+.trail-heading > b {
+  min-width: 38px;
+  padding: 5px;
+  border: 2px solid var(--brown-dark);
+  color: #fff8d8;
+  background: var(--green);
+  text-align: center;
+}
+
+.trail-list {
+  display: grid;
+  gap: 7px;
+  margin-top: 8px;
+}
+
+.trail-item {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 7px;
+  padding: 7px;
+  border: 2px solid rgba(53, 34, 25, 0.24);
+  background: rgba(255, 255, 255, 0.34);
+}
+
+.trail-item > div:last-child {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.trail-item strong {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.72rem;
+  line-height: 1.25;
+}
+
+.trail-number {
+  width: 23px;
+  height: 23px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--brown-dark);
+  border-radius: 50%;
+  color: #fff8d8;
+  background: var(--rust);
+  font-size: 0.65rem;
+}
+
+.trail-day {
+  color: var(--rust);
+  font-size: 0.61rem;
+  text-transform: uppercase;
+}
+
+.mini-impact-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.mini-impact-row span {
+  padding: 2px 4px;
+  border-radius: 2px;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.58rem;
+  font-weight: 800;
+  line-height: 1.2;
 }
 
 .world-marker {
@@ -555,11 +724,15 @@ kbd {
   z-index: 40;
   left: 50%;
   bottom: 18px;
-  width: min(820px, calc(100% - 28px));
+  width: min(940px, calc(100% - 28px));
   max-height: 58%;
   overflow: auto;
   transform: translateX(-50%);
   padding: 16px;
+}
+
+.dialogue-outcome {
+  max-height: calc(100% - 92px);
 }
 
 .dialogue-heading {
@@ -659,18 +832,126 @@ kbd {
   line-height: 1.35;
 }
 
-.impact-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-  margin: 12px 0;
+.choice-recap {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0 10px;
+  padding: 8px 10px;
+  border: 2px dashed rgba(53, 34, 25, 0.38);
+  background: rgba(255, 255, 255, 0.3);
 }
 
-.impact-row span {
-  padding: 5px 8px;
-  border: 2px solid var(--brown-dark);
+.choice-recap span {
+  color: var(--rust);
+  font-size: 0.66rem;
+  text-transform: uppercase;
+}
+
+.choice-recap strong {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.88rem;
+}
+
+.metric-change-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.metric-change-card {
+  position: relative;
+  display: grid;
+  gap: 7px;
+  padding: 10px;
+  overflow: hidden;
+  border: 3px solid var(--brown-dark);
   background: #fff8d8;
-  font-size: 0.76rem;
+  box-shadow: 0 3px 0 var(--brown-dark);
+  animation: metric-reveal 420ms steps(5) both;
+}
+
+.metric-change-card:nth-child(2) {
+  animation-delay: 90ms;
+}
+
+.metric-change-card:nth-child(3) {
+  animation-delay: 180ms;
+}
+
+.metric-change-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 6px;
+  background: currentColor;
+}
+
+.metric-change-label {
+  padding-left: 4px;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+}
+
+.metric-values {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: end;
+  gap: 5px;
+  color: var(--ink);
+}
+
+.metric-values > span {
+  display: grid;
+  gap: 1px;
+}
+
+.metric-values > span:last-child {
+  text-align: right;
+}
+
+.metric-values small {
+  color: rgba(43, 33, 24, 0.62);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.58rem;
+  text-transform: uppercase;
+}
+
+.metric-values strong {
+  font-size: clamp(0.82rem, 1.4vw, 1rem);
+  white-space: nowrap;
+}
+
+.metric-values b {
+  color: var(--brown);
+}
+
+.metric-change-card > em {
+  width: fit-content;
+  margin-left: 4px;
+  padding: 3px 6px;
+  border: 2px solid currentColor;
+  border-radius: 2px;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.68rem;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.story-impact {
+  margin: 12px 0;
+  padding: 10px 12px;
+  border-left: 5px solid var(--rust);
+  background: rgba(169, 79, 47, 0.1);
+}
+
+.story-impact p {
+  margin: 4px 0 0;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.88rem;
+  line-height: 1.4;
 }
 
 .field-note {
@@ -765,6 +1046,16 @@ kbd {
   padding: clamp(18px, 3vw, 30px);
 }
 
+.ending-screen {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.ending-card {
+  margin: 0;
+}
+
 .ending-header {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -828,6 +1119,18 @@ kbd {
   gap: 2px;
 }
 
+.season-impact-row {
+  margin-top: 4px;
+}
+
+.log-consequence {
+  margin: 3px 0 0;
+  color: rgba(43, 33, 24, 0.78) !important;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.7rem !important;
+  line-height: 1.35;
+}
+
 .season-log span {
   font-size: 0.73rem;
 }
@@ -870,6 +1173,21 @@ kbd {
 @keyframes ready-pulse {
   from { transform: scale(1); }
   to { transform: scale(1.05); }
+}
+
+@keyframes impact-pop {
+  from { opacity: 0; transform: translateY(4px) scale(0.9); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes metric-reveal {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes trail-enter {
+  from { opacity: 0; transform: translateX(12px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
 @keyframes cloud-drift {
@@ -927,12 +1245,16 @@ kbd {
   }
 
   .hud-date > span:not(.hud-day),
-  .hud-stats span:nth-child(2) {
+  .hud-stats > .hud-stat:nth-child(2) {
     display: none;
   }
 
-  .hud-stats span {
+  .hud-stats > .hud-stat {
     padding: 4px 5px;
+  }
+
+  .hud-stat em {
+    font-size: 0.5rem;
   }
 
   .quest-card {
@@ -965,6 +1287,54 @@ kbd {
 
   .coach-button small {
     display: none;
+  }
+
+  .decision-trail {
+    top: 68px;
+    right: 7px;
+    width: 148px;
+    max-height: 225px;
+    padding: 7px;
+  }
+
+  .trail-heading {
+    padding-bottom: 5px;
+  }
+
+  .trail-heading .eyebrow,
+  .trail-heading > span > strong {
+    font-size: 0.57rem;
+  }
+
+  .trail-heading > b {
+    min-width: 30px;
+    padding: 3px;
+    font-size: 0.6rem;
+  }
+
+  .trail-item:not(:last-child) {
+    display: none;
+  }
+
+  .trail-item {
+    grid-template-columns: 19px minmax(0, 1fr);
+    gap: 4px;
+    padding: 5px;
+  }
+
+  .trail-number {
+    width: 18px;
+    height: 18px;
+    font-size: 0.52rem;
+  }
+
+  .trail-item strong {
+    font-size: 0.59rem;
+  }
+
+  .trail-day,
+  .mini-impact-row span {
+    font-size: 0.5rem;
   }
 
   .quest-progress {
@@ -1028,6 +1398,10 @@ kbd {
     padding: 12px;
   }
 
+  .dialogue-outcome {
+    max-height: calc(100svh - 64px);
+  }
+
   .dialogue-heading .portrait {
     width: 47px;
     height: 47px;
@@ -1041,6 +1415,26 @@ kbd {
 
   .decision-grid {
     grid-template-columns: 1fr;
+  }
+
+  .metric-change-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .metric-change-card {
+    grid-template-columns: 0.8fr 1.6fr auto;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 8px;
+  }
+
+  .metric-change-card > em {
+    margin: 0;
+    font-size: 0.58rem;
+  }
+
+  .metric-change-label {
+    font-size: 0.58rem;
   }
 
   .decision-grid button {
@@ -1057,9 +1451,12 @@ kbd {
     padding: 12px;
   }
 
-  .title-card,
-  .ending-card {
+  .title-card {
     margin: auto;
+  }
+
+  .ending-card {
+    margin: 0;
   }
 
   .ending-header {
