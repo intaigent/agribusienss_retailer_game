@@ -30,6 +30,8 @@ type Stage = {
   weather: string;
   title: string;
   quest: string;
+  requestSummary: string;
+  coach: string;
   customer: string;
   customerIcon: string;
   customerPosition: Position;
@@ -62,6 +64,9 @@ const STAGES: Stage[] = [
     weather: "☀️ 24°",
     title: "Stock before the vuli rains",
     quest: "Prepare your BLF Centre without locking all your capital in seed.",
+    requestSummary: "Neema needs a stock plan before you place today’s costly Arusha order.",
+    coach:
+      "Start with the stock card, expected demand, delivery lead time, and cash needed for other products. Supplier terms can preserve options—but I will leave the decision to you.",
     customer: "Neema",
     customerIcon: "👩🏾",
     customerPosition: { x: 34, y: 52 },
@@ -142,6 +147,9 @@ const STAGES: Stage[] = [
     weather: "⛅ 27°",
     title: "Mama Rehema asks for credit",
     quest: "Help a loyal tomato farmer without creating an unmanaged debt.",
+    requestSummary: "Mama Rehema wants TSh 860,000 of inputs and can pay TSh 220,000 today.",
+    coach:
+      "Customer credit can grow sales, but it also delays your cash. Check repayment history, present capacity to repay, clear payment dates, monitoring cost, and the effect on your own supplier bills.",
     customer: "Mama Rehema",
     customerIcon: "👩🏿‍🌾",
     customerPosition: { x: 36, y: 54 },
@@ -168,13 +176,13 @@ const STAGES: Stage[] = [
         text: "I am planting one hectare of tomatoes, but my confirmed buyer contract covers only two-thirds of the harvest.",
       },
       {
-        id: "alp-coach",
-        label: "Ask ALP Coach",
-        icon: "📱",
+        id: "payment-plan",
+        label: "Map payments",
+        icon: "🗓️",
         x: 54,
         y: 37,
-        speaker: "ALP Coach · Working with Credit",
-        text: "Before offering credit, check repayment history, current ability to repay, terms, monitoring cost, and the effect on your own cash flow.",
+        speaker: "Mama Rehema",
+        text: "I can pay TSh 220,000 now, another amount after my first vegetable sale, and the final balance after the tomato buyer pays.",
       },
     ],
     choices: [
@@ -222,6 +230,9 @@ const STAGES: Stage[] = [
     weather: "🌧️ 22°",
     title: "The spotted tomato leaf",
     quest: "Give responsible advice before tomorrow’s model-farm demo day.",
+    requestSummary: "Juma wants an immediate answer about a cheap, unfamiliar pesticide for spotted tomatoes.",
+    coach:
+      "Your Centre is a knowledge hub, not only a shop. Separate observation from diagnosis, verify the product, consult qualified support when uncertain, and give clear safe-use guidance.",
     customer: "Juma",
     customerIcon: "🧑🏾‍🌾",
     customerPosition: { x: 69, y: 54 },
@@ -396,6 +407,17 @@ export default function Home() {
     setDialogue({ kind: "decision" });
   }, [cluesFound.length, dialogue, playTone, stage]);
 
+  const openCoach = useCallback(() => {
+    if (dialogue) return;
+    playTone(820);
+    setDialogue({
+      kind: "clue",
+      speaker: `ALP Coach · ${stage.title}`,
+      icon: "📱",
+      text: stage.coach,
+    });
+  }, [dialogue, playTone, stage]);
+
   const interactWithNearest = useCallback(() => {
     if (dialogue || screen !== "game") return;
     const targets = [
@@ -480,10 +502,16 @@ export default function Home() {
       setScreen("end");
       return;
     }
+    const nextStage = STAGES[stageIndex + 1];
     setStageIndex((current) => current + 1);
     setCluesFound([]);
     setPlayer(START_POSITION);
-    setDialogue(null);
+    setDialogue({
+      kind: "prompt",
+      speaker: nextStage.customer,
+      icon: nextStage.customerIcon,
+      text: nextStage.opening,
+    });
   };
 
   const startGame = () => {
@@ -567,9 +595,14 @@ export default function Home() {
                 <span className="eyebrow">Current quest</span>
                 <h1>{stage.title}</h1>
                 <p>{stage.quest}</p>
+                <div className="request-brief">
+                  <span>Request from {stage.customer}</span>
+                  <p>{stage.requestSummary}</p>
+                </div>
                 <div className="quest-progress" aria-label={`${progress}% season complete`}>
                   <span style={{ width: `${progress}%` }} />
                 </div>
+                <span className="evidence-label">Evidence to gather</span>
                 <ul>
                   {stage.hotspots.map((hotspot) => (
                     <li key={hotspot.id} className={cluesFound.includes(hotspot.id) ? "done" : ""}>
@@ -583,6 +616,10 @@ export default function Home() {
                     ? `${2 - cluesFound.length} more clue${2 - cluesFound.length === 1 ? "" : "s"} needed`
                     : `Talk to ${stage.customer} to decide`}
                 </p>
+                <button className="coach-button" type="button" onClick={openCoach}>
+                  <span aria-hidden="true">📱</span>
+                  <span><strong>ALP Coach</strong><small>Get a nudge, not the answer</small></span>
+                </button>
               </aside>
 
               {stage.hotspots.map((hotspot) => (
@@ -601,13 +638,15 @@ export default function Home() {
 
               <button
                 type="button"
-                className="world-marker customer-marker"
+                className={`world-marker customer-marker ${cluesFound.length >= 2 ? "decision-ready" : ""}`}
                 style={{ left: `${stage.customerPosition.x}%`, top: `${stage.customerPosition.y}%` }}
                 onClick={openCustomer}
                 aria-label={`Talk to ${stage.customer}`}
               >
                 <span className="npc-sprite" aria-hidden="true">{stage.customerIcon}</span>
-                <span className="marker-label">Talk to {stage.customer}</span>
+                <span className="marker-label">
+                  {cluesFound.length >= 2 ? `Decision ready · ${stage.customer}` : `Talk to ${stage.customer}`}
+                </span>
               </button>
 
               <div
@@ -697,12 +736,17 @@ export default function Home() {
                         </div>
                       </div>
                       <div className="dialogue-actions">
-                        {dialogue.kind === "prompt" && cluesFound.length >= 2 && (
-                          <button className="primary-button" type="button" onClick={() => setDialogue({ kind: "decision" })}>
-                            Make the decision →
+                        {dialogue.kind === "prompt" ? (
+                          <button
+                            className="primary-button"
+                            type="button"
+                            onClick={() => cluesFound.length >= 2 ? setDialogue({ kind: "decision" }) : setDialogue(null)}
+                          >
+                            {cluesFound.length >= 2 ? "Make the decision →" : "Let me investigate →"}
                           </button>
+                        ) : (
+                          <button type="button" onClick={() => setDialogue(null)}>Back to the Centre</button>
                         )}
-                        <button type="button" onClick={() => setDialogue(null)}>Close</button>
                       </div>
                     </>
                   )}

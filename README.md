@@ -42,7 +42,7 @@ The learning feedback uses retailer topics from the ALP curriculum:
 
 ## Play locally
 
-Node.js 22.13 or newer is required.
+Node.js 20.9 or newer is required.
 
 ```bash
 npm install
@@ -61,7 +61,7 @@ Open `http://localhost:3000`.
 npm run build
 ```
 
-The app uses Next.js-compatible components through vinext and is configured for Cloudflare Workers/Sites deployment.
+The app is a standard Next.js project configured for zero-configuration deployment on Vercel.
 
 ## Asset note
 
