@@ -7,17 +7,17 @@ const siteUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: "Kijani Quest | Better Life Farming Tanzania",
+  title: "Kijani Centre | An Agribusiness Life Simulation",
   description:
-    "A short decision game for agribusiness retailers applying ALP lessons in a Better Life Farming Centre in Tanzania.",
+    "Run a Better Life Farming Centre in Tanzania: manage stock, cash, farmer relationships, and delayed consequences across an uncertain vuli week.",
   icons: {
     icon: "/game-map.png",
     shortcut: "/game-map.png",
   },
   openGraph: {
-    title: "Kijani Quest",
+    title: "Kijani Centre",
     description:
-      "Run a rural Better Life Farming Centre and put ALP training into practice.",
+      "Run the shop for five days and discover how cash, stock, advice, and trust interact.",
     images: ["/game-map.png"],
   },
 };

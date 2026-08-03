@@ -2,39 +2,55 @@ import assert from "node:assert/strict";
 import { access, readFile, stat } from "node:fs/promises";
 import test from "node:test";
 
-test("keeps the complete Tanzania scenario in the game", async () => {
+test("models a five-day Tanzania retailer week instead of a lesson sequence", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
 
-  assert.match(page, /Kijani Quest/);
-  assert.match(page, /Stock before the vuli rains/);
-  assert.match(page, /Mama Rehema asks for credit/);
-  assert.match(page, /The spotted tomato leaf/);
-  assert.match(page, /Inventory Management Methods/);
-  assert.match(page, /Credit for Customers/);
-  assert.match(page, /Customer Care/);
+  assert.match(page, /Kijani Centre/);
+  assert.match(page, /Better Life Farming · Tanzania/);
+  assert.match(page, /Run the shop for five days/);
+  assert.match(page, /Opening week/);
+  assert.match(page, /Credit and cash flow/);
+  assert.match(page, /The rain signal/);
+  assert.match(page, /Advice under pressure/);
+  assert.match(page, /Demo and market day/);
+  assert.doesNotMatch(page, /Choose any 2|Decision ready|Your decision trail/);
 });
 
-test("starts every day with the request and keeps ALP Coach available", async () => {
+test("lets the player operate the Centre and make trade-offs", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
 
-  assert.match(page, /requestSummary/);
-  assert.match(page, /Request from \{stage\.customer\}/);
-  assert.match(page, /text: nextStage\.opening/);
-  assert.match(page, /Let me investigate/);
-  assert.match(page, /Get a nudge, not the answer/);
-  assert.match(page, /Decision ready/);
-  assert.match(page, /Choose any 2/);
-  assert.match(page, /Open →/);
+  assert.match(page, /Count the stockroom/);
+  assert.match(page, /Call farmer clients/);
+  assert.match(page, /Prepare the model farm/);
+  assert.match(page, /Build a supplier order/);
+  assert.match(page, /Quantity to sell/);
+  assert.match(page, /Build the package/);
+  assert.match(page, /Choose repayment timing/);
+  assert.match(page, /Verify before recommending/);
+  assert.match(page, /Close shop for the day/);
 });
 
-test("shows the cumulative impact of every decision", async () => {
+test("carries delayed consequences into later days and supports replay", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
 
-  assert.match(page, /Your decision trail/);
-  assert.match(page, /Before and after decision impact/);
-  assert.match(page, /Your Centre changed/);
-  assert.match(page, /formatMetricDelta/);
-  assert.match(page, /Season impact/);
+  assert.match(page, /PendingOutcome/);
+  assert.match(page, /dueDay: 4/);
+  assert.match(page, /News carried into today/);
+  assert.match(page, /You will not know the repayment result until later in the week/);
+  assert.match(page, /What changed today\?/);
+  assert.match(page, /Play a different vuli week/);
+  assert.match(page, /Late rain/);
+  assert.match(page, /Early showers/);
+  assert.match(page, /Uneven rain/);
+});
+
+test("keeps learning support optional and contextual", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+
+  assert.match(page, /Optional ALP Coach/);
+  assert.match(page, /A nudge, not an answer/);
+  assert.match(page, /Ideas discovered through play/);
+  assert.match(page, /More notes appear when you use supplier, credit, and advice systems/);
 });
 
 test("is a standard Next.js project ready for Vercel", async () => {
@@ -47,7 +63,7 @@ test("is a standard Next.js project ready for Vercel", async () => {
   assert.match(packageJson, /"dev": "next dev"/);
   assert.match(packageJson, /"build": "next build"/);
   assert.doesNotMatch(packageJson, /vinext|wrangler|cloudflare/i);
-  assert.match(layout, /Kijani Quest \| Better Life Farming Tanzania/);
+  assert.match(layout, /Kijani Centre \| An Agribusiness Life Simulation/);
   assert.ok(mapStats.size > 100_000);
 
   await assert.rejects(access(new URL("../.openai/hosting.json", import.meta.url)));
