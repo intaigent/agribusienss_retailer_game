@@ -11,6 +11,7 @@ type ToolPanel = "inventory" | "ledger" | "coach" | "notebook" | null;
 type CreditOptionId = "starter" | "staged" | "large";
 type AdviceId = "verify" | "sell" | "refer";
 type BookKind = "Cash ledger" | "Inventory card" | "Customer credit ledger" | "Expense ledger" | "Follow-up log";
+type SaleChoice = { quantity: number; icon: string; label: string; note: string; tone?: "warm" | "careful" };
 
 type StoryLine = { speaker: string; icon: string; text: string };
 
@@ -61,6 +62,7 @@ type BookEntry = {
 
 type CoachGuidance = {
   lesson: string;
+  nudge: string;
   know: string;
   consider: string;
   record: string;
@@ -132,12 +134,7 @@ const BRIEFING: StoryLine[] = [
   {
     speaker: "Neema",
     icon: "👩🏾",
-    text: "Rashidi is cycling over with cash for five packs. Mama Rehema is also coming with her farm notebook to discuss credit.",
-  },
-  {
-    speaker: "Amina",
-    icon: "👩🏾‍💼",
-    text: "Then I had better listen carefully, keep the books honest, and still reach the model plot before the farmers do.",
+    text: "Rashidi wants five packs. Rehema is coming about credit. Listen well—and reach the model plot by three.",
   },
 ];
 
@@ -149,8 +146,8 @@ const CUSTOMERS: Customer[] = [
     icon: "🧑🏾‍🌾",
     product: "seed",
     requested: 5,
-    arrival: "Rashidi leans his bicycle against the fence and places a neatly folded bundle of notes on the counter.",
-    opening: "Habari za asubuhi, Amina! I brought cash for five tomato seed packs. If we plant before the next rain, the nursery will be ready on time.",
+    arrival: "Rashidi parks his bicycle and unfolds a bundle of notes.",
+    opening: "Habari, Amina! The rain is coming—can I take all five seed packs today?",
     context: "Eight packs were counted this morning. Mama Rehema said she may need four later, and today's delivery truck is not coming.",
     next: "Rashidi pedals toward his farm. A few minutes later, Mama Rehema appears at the doorway with a well-used notebook.",
     x: 36,
@@ -161,8 +158,8 @@ const CUSTOMERS: Customer[] = [
     kind: "credit",
     name: "Mama Rehema",
     icon: "👩🏿‍🌾",
-    arrival: "Mama Rehema opens her farm notebook to a page of dates, harvest amounts, and two crossed-out balances.",
-    opening: "I have TSh 220,000 with me today. My vegetable buyer pays next month. Can we make a package that helps my farm without leaving either of us worried?",
+    arrival: "Mama Rehema opens her notebook to two crossed-out balances.",
+    opening: "I have TSh 220,000 today, and my buyer pays next month. Can we make an agreement neither of us worries about?",
     next: "The agreement is folded into Rehema's notebook. At 2:00 PM, Juma hurries in with a tomato leaf wrapped in newspaper.",
     x: 64,
     y: 51,
@@ -172,8 +169,8 @@ const CUSTOMERS: Customer[] = [
     kind: "advice",
     name: "Juma",
     icon: "🧑🏾‍🌾",
-    arrival: "Juma carefully unwraps a spotted tomato leaf. Behind him, the wall clock sounds louder than it did this morning.",
-    opening: "These spots came after the rain. A travelling seller says his cheap pesticide fixes everything. I trust this Centre, Amina—what should I do before I spend my money?",
+    arrival: "Juma unwraps a spotted leaf as the wall clock ticks behind him.",
+    opening: "A travelling seller says his bottle fixes these spots. I trust this Centre—what should I do before spending my money?",
     next: "At 3:00 PM, voices rise from the model plot. Neema waves from beside the demonstration bed.",
     x: 37,
     y: 50,
@@ -185,8 +182,8 @@ const CUSTOMERS: Customer[] = [
     icon: "👩🏾",
     product: "seed",
     requested: 2,
-    arrival: "Neema arrives from the model plot with two farmers still discussing the tomato variety they have just seen.",
-    opening: "The demonstration has them excited. These two farmers want to try the tomato variety at home. Do we still have a seed pack for each of them?",
+    arrival: "Neema returns with two farmers from the model plot.",
+    opening: "They loved today's tomato variety. Is there one seed pack for each of them?",
     context: "The afternoon group is waiting. This is the final seed request before Amina closes the Centre.",
     next: "The sun drops behind the shop roof. Amina pulls the books closer and listens as the day's choices come back to her.",
     x: 66,
@@ -214,7 +211,7 @@ const CREDIT_OPTIONS: Array<{
   },
   {
     id: "staged",
-    label: "Two-step growing package",
+    label: "Grow in two steps",
     explanation: "Enough to begin now, with one smaller promise written for harvest time.",
     value: 480000,
     seed: 3,
@@ -249,6 +246,27 @@ const NOTEBOOK: Record<string, { title: string; copy: string }> = {
 
 const splitSentences = (text: string) =>
   text.match(/[^.!?]+[.!?]+|[^.!?]+$/g)?.map((sentence) => sentence.trim()).filter(Boolean) ?? [text];
+
+const saleChoicesFor = (customer: SaleCustomer, available: number): SaleChoice[] => {
+  const canGive = Math.min(customer.requested, available);
+  if (customer.id === "rashidi-sale") {
+    return [
+      { quantity: canGive, icon: "🚲", label: "Fill his bicycle crate", note: `${canGive} packs · ${available - canGive} stay`, tone: "warm" },
+      { quantity: Math.min(4, canGive), icon: "🤝", label: "Share the shelf", note: `4 packs · 4 stay for Rehema`, tone: "careful" },
+    ];
+  }
+  if (canGive === 0) return [{ quantity: 0, icon: "🪵", label: "Explain the empty shelf", note: "Write both names for follow-up", tone: "careful" }];
+  if (canGive === 1) {
+    return [
+      { quantity: 1, icon: "🌱", label: "Offer the last pack", note: "One farmer can begin", tone: "warm" },
+      { quantity: 0, icon: "📓", label: "Save it and follow up", note: "Call both farmers later", tone: "careful" },
+    ];
+  }
+  return [
+    { quantity: 2, icon: "🧺", label: "Pack one for each", note: "Both farmers leave with seed", tone: "warm" },
+    { quantity: 1, icon: "🌱", label: "Offer one pack", note: "They can share the learning", tone: "careful" },
+  ];
+};
 
 const formatCash = (amount: number) => {
   const sign = amount < 0 ? "-" : "";
@@ -285,9 +303,9 @@ export default function Home() {
   const [completedIds, setCompletedIds] = useState<string[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [customerLineIndex, setCustomerLineIndex] = useState(0);
-  const [saleQuantity, setSaleQuantity] = useState(0);
   const [creditOptionId, setCreditOptionId] = useState<CreditOptionId>("staged");
   const [creditChecks, setCreditChecks] = useState({ ledger: false, buyer: false });
+  const [showBigCreditOption, setShowBigCreditOption] = useState(false);
   const [adviceChecks, setAdviceChecks] = useState({ leaf: false, label: false, consultant: false });
   const [ledgerExposure, setLedgerExposure] = useState(0);
   const [toolPanel, setToolPanel] = useState<ToolPanel>(null);
@@ -295,8 +313,7 @@ export default function Home() {
   const [flags, setFlags] = useState<StoryFlags>(INITIAL_FLAGS);
   const [impact, setImpact] = useState<Impact | null>(null);
   const [impactStep, setImpactStep] = useState<0 | 1 | 2>(0);
-  const [coachReady, setCoachReady] = useState(false);
-  const [coachExpanded, setCoachExpanded] = useState(true);
+  const [coachExpanded, setCoachExpanded] = useState(false);
   const [bookEntries, setBookEntries] = useState<BookEntry[]>([]);
   const [bookkeepingIndex, setBookkeepingIndex] = useState(0);
   const [bookkeepingFeedback, setBookkeepingFeedback] = useState("");
@@ -312,16 +329,13 @@ export default function Home() {
   const currentCustomer = CUSTOMERS[completedIds.length];
   const selectedCreditOption = CREDIT_OPTIONS.find((option) => option.id === creditOptionId) ?? CREDIT_OPTIONS[1];
   const customerLines = selectedCustomer ? splitSentences(selectedCustomer.opening) : [];
+  const saleChoices = selectedCustomer?.kind === "sale" ? saleChoicesFor(selectedCustomer, inventory[selectedCustomer.product]) : [];
   const totalInventory = Object.values(inventory).reduce((sum, value) => sum + value, 0);
   const creditDeposit = Math.min(220000, selectedCreditOption.value);
   const creditBalance = selectedCreditOption.value - creditDeposit;
   const creditTimeCost = 25 + Number(creditChecks.ledger) * 10 + Number(creditChecks.buyer) * 15;
   const adviceEvidenceCount = Number(adviceChecks.leaf) + Number(adviceChecks.label) + Number(adviceChecks.consultant);
   const adviceTimeCost = (choice: AdviceId) => (choice === "verify" ? 25 : choice === "sell" ? 15 : 20);
-  const deadlineLabel = (finish: number) =>
-    finish <= DEMO_DEADLINE
-      ? `${formatTime(finish)} · ${DEMO_DEADLINE - finish} min early`
-      : `${formatTime(finish)} · ${finish - DEMO_DEADLINE} min late`;
   const pendingBookEntry = impact?.bookkeeping[bookkeepingIndex];
   const booksComplete = Boolean(impact && bookkeepingIndex >= impact.bookkeeping.length);
 
@@ -329,6 +343,7 @@ export default function Home() {
     if (customer.id === "rashidi-sale") {
       return {
         lesson: "From your BLF training · Stock and cash books",
+        nudge: "Count what will remain after his bicycle leaves.",
         know: `Count the shelf: ${inventory.seed} seed packs. Rashidi wants 5, and Rehema may return for as many as 4.`,
         consider: "The cash on the counter is real, but so is the next farmer's need. No truck is coming to rescue an empty shelf.",
         record: "If packs and cash cross the counter, leave Rashidi a receipt, put the money in the green cash book, and mark the blue stock card.",
@@ -337,6 +352,7 @@ export default function Home() {
     if (customer.kind === "credit") {
       return {
         lesson: "From your BLF training · Credit for customers",
+        nudge: "A promise is safer when both people can see the date.",
         know: `The ${formatCash(220000)} on the counter is cash. Anything beyond it is a promise from Rehema's next harvest.`,
         consider: "A promise feels safer when you know the repayment history, confirm the buyer, and write dates both people can understand.",
         record: "Money received goes in the green cash book. Products leaving go on blue stock cards. The unpaid promise belongs in Rehema's brown credit book.",
@@ -346,6 +362,7 @@ export default function Home() {
       const remaining = Math.max(0, DEMO_DEADLINE - minutes);
       return {
         lesson: "From your BLF training · Risk and customer care",
+        nudge: "Which mistake could hurt Juma most?",
         know: `The wall clock leaves ${remaining} minutes before the demonstration. The leaf spots—and the travelling seller's bottle—still hold unanswered questions.`,
         consider: "Ask which mistake could hurt Juma most. Each useful check lowers uncertainty, but the farmers at the model plot will not stop their clocks.",
         record: "A sale moves cash and a bottle. Paying for a proper check creates an expense. A referral moves neither, but Amina should remember the follow-up.",
@@ -353,6 +370,7 @@ export default function Home() {
     }
     return {
       lesson: "From your BLF training · Closing stock and customer care",
+      nudge: "Let the shelf—not hope—answer first.",
       know: `Run a hand along the shelf: ${inventory.seed} seed packs remain${demoLateMinutes ? `, and the group has already waited ${demoLateMinutes} minutes` : ", with the demonstration starting on time"}.`,
       consider: "Let the physical shelf—not hope—shape the answer. A clear explanation can protect a relationship even when stock is short.",
       record: inventory.seed > 0
@@ -439,15 +457,13 @@ export default function Home() {
     if (!currentCustomer || customer.id !== currentCustomer.id) return;
     setSelectedCustomer(customer);
     setCustomerLineIndex(0);
-    setCoachReady(false);
-    setCoachExpanded(true);
+    setCoachExpanded(false);
     setPlayer({ x: customer.x, y: Math.min(84, customer.y + 9) });
     setToast("");
-    if (customer.kind === "sale") {
-      setSaleQuantity(Math.min(customer.requested, inventory[customer.product]));
-    } else if (customer.kind === "credit") {
+    if (customer.kind === "credit") {
       setCreditOptionId("staged");
       setCreditChecks({ ledger: false, buyer: false });
+      setShowBigCreditOption(false);
     }
     playTone(760);
   };
@@ -462,10 +478,10 @@ export default function Home() {
     setImpact(nextImpact);
   };
 
-  const completeSale = () => {
+  const completeSale = (chosenQuantity: number) => {
     if (!selectedCustomer || selectedCustomer.kind !== "sale") return;
     const customer = selectedCustomer;
-    const quantity = Math.max(0, Math.min(saleQuantity, inventory[customer.product], customer.requested));
+    const quantity = Math.max(0, Math.min(chosenQuantity, inventory[customer.product], customer.requested));
     const revenue = quantity * PRODUCTS[customer.product].price;
     const beforeStock = inventory[customer.product];
     const afterStock = beforeStock - quantity;
@@ -482,12 +498,17 @@ export default function Home() {
       ...(customer.id === "rashidi-sale" ? { rashidiQuantity: quantity } : { neemaQuantity: quantity }),
     }));
 
-    const summary =
-      quantity === customer.requested
-        ? `${quantity} seed packs leave the wooden shelf, and the cash tin grows heavier.`
+    const summary = customer.id === "rashidi-sale"
+      ? quantity === customer.requested
+        ? "Five packets leave with Rashidi. Three remain."
         : quantity === 0
-          ? `No seed or cash changes hands. The unfilled request still belongs somewhere Amina can find it later.`
-          : `${quantity} of the ${customer.requested} requested packs cross the counter. The rest remain a conversation for another day.`;
+          ? "The shelf stays full. Rashidi leaves without seed."
+          : `${quantity} packets go with Rashidi. ${afterStock} stay for Rehema.`
+      : quantity === customer.requested
+        ? "One packet goes to each farmer."
+        : quantity === 0
+          ? "The shelf is empty. Their names go into follow-up."
+          : "One packet leaves. The farmers will share what they learn.";
     const reactionText = customer.id === "rashidi-sale"
       ? quantity === customer.requested
         ? "Asante! I will tie these to the bicycle and go straight to the nursery."
@@ -820,7 +841,6 @@ export default function Home() {
     setCompletedIds([]);
     setSelectedCustomer(null);
     setCustomerLineIndex(0);
-    setSaleQuantity(0);
     setCreditOptionId("staged");
     setCreditChecks({ ledger: false, buyer: false });
     setAdviceChecks({ leaf: false, label: false, consultant: false });
@@ -830,8 +850,8 @@ export default function Home() {
     setFlags(INITIAL_FLAGS);
     setImpact(null);
     setImpactStep(0);
-    setCoachReady(false);
-    setCoachExpanded(true);
+    setCoachExpanded(false);
+    setShowBigCreditOption(false);
     setBookEntries([]);
     setBookkeepingIndex(0);
     setBookkeepingFeedback("");
@@ -939,8 +959,6 @@ export default function Home() {
               <div className="hud-stats" aria-label="Centre status">
                 <span title="Available capital">🪙 <strong>{formatCash(metrics.cash)}</strong></span>
                 <span title="Stock units">📦 <strong>{totalInventory}</strong></span>
-                <span title="Farmer trust">💚 <strong>{metrics.trust}%</strong></span>
-                <span title="Credit still owed">📒 <strong>{formatCash(ledgerExposure)}</strong></span>
               </div>
               <button className="icon-button" type="button" aria-label={soundOn ? "Turn sound off" : "Turn sound on"} onClick={() => setSoundOn((current) => !current)}>{soundOn ? "🔊" : "🔇"}</button>
             </header>
@@ -1026,8 +1044,8 @@ export default function Home() {
             <div className="interaction-scrim">
               <div className="interaction-sheet pixel-panel" role="dialog" aria-modal="true" aria-label={`Conversation with ${selectedCustomer.name}`}>
                 <button className="sheet-close" type="button" aria-label="Return to the shop" onClick={() => setSelectedCustomer(null)}>×</button>
-                <div className="conversation-heading"><span>{selectedCustomer.icon}</span><div><span className="eyebrow">At the counter · {formatTime(minutes)}</span><h2>{selectedCustomer.name}</h2><p>{customerLineIndex < customerLines.length ? "First, hear them out." : "The counter is quiet. Amina's choice comes next."}</p></div></div>
-                <p className="scene-setting">{selectedCustomer.arrival}</p>
+                <div className={`conversation-heading ${customerLineIndex >= customerLines.length ? "deciding" : ""}`}><span>{selectedCustomer.icon}</span><div><span className="eyebrow">At the counter · {formatTime(minutes)}</span><h2>{selectedCustomer.name}</h2><p>{customerLineIndex < customerLines.length ? "First, hear them out." : "Your move."}</p></div></div>
+                {customerLineIndex < customerLines.length && <p className="scene-setting">{selectedCustomer.arrival}</p>}
 
                 {customerLineIndex < customerLines.length ? (
                   <div className="story-stage customer-story">
@@ -1043,77 +1061,63 @@ export default function Home() {
                 ) : (
                   <>
                     {selectedGuidance && (
-                      <section className={`decision-coach ${coachReady && !coachExpanded ? "collapsed" : ""}`} aria-label="ALP Coach decision guide">
-                        <div className="coach-heading"><span>🧑🏾‍🏫</span><div><small>{selectedGuidance.lesson}</small><strong>Coach Zawadi has a thought</strong></div></div>
-                        {coachExpanded ? (
-                          <>
-                            <div className="coach-checks">
-                              <article><b>👀</b><div><strong>Look at the counter</strong><p>{selectedGuidance.know}</p></div></article>
-                              <article><b>↪</b><div><strong>Think one step ahead</strong><p>{selectedGuidance.consider}</p></div></article>
-                              <article><b>✎</b><div><strong>Leave a paper trail</strong><p>{selectedGuidance.record}</p></div></article>
-                            </div>
-                            <button className="coach-ready-button" type="button" onClick={() => { setCoachReady(true); setCoachExpanded(false); playTone(790, 0.08); }}>{coachReady ? "Back to the counter" : "Got it · let me decide →"}</button>
-                          </>
-                        ) : (
-                          <button className="coach-review-button" type="button" onClick={() => setCoachExpanded(true)}>🧑🏾‍🏫 Hear Coach Zawadi again</button>
-                        )}
+                      <section className="decision-coach coach-nudge" aria-label="ALP Coach decision guide">
+                        <div className="coach-heading"><span>🧑🏾‍🏫</span><div><small>Coach Zawadi</small><strong>“{selectedGuidance.nudge}”</strong></div><button className="coach-why-button" type="button" onClick={() => setCoachExpanded((current) => !current)}>{coachExpanded ? "Hide" : "Why?"}</button></div>
+                        {coachExpanded && <div className="coach-more"><small>{selectedGuidance.lesson}</small><p>{selectedGuidance.consider}</p></div>}
                       </section>
                     )}
 
-                    {coachReady && selectedCustomer.kind === "sale" && (
-                      <div className="sale-builder">
-                        <div className="known-context"><span>👀</span><div><strong>Amina glances around the shop</strong><p>{selectedCustomer.id === "neema-finale" && demoLateMinutes > 0 ? `Amina reached the demonstration ${demoLateMinutes} minutes late. The waiting group noticed, and this is the final seed request today.` : selectedCustomer.context}</p></div></div>
-                        <div className="stock-snapshot"><span>{PRODUCTS[selectedCustomer.product].icon}</span><div><small>On the wooden shelf</small><strong>{inventory[selectedCustomer.product]} {PRODUCTS[selectedCustomer.product].shortLabel.toLowerCase()} units</strong></div><div><small>{selectedCustomer.name} asks for</small><strong>{selectedCustomer.requested}</strong></div></div>
-                        <label htmlFor="sale-quantity">Packs Amina puts on the counter <strong>{saleQuantity}</strong></label>
-                        <input id="sale-quantity" type="range" min="0" max={Math.min(selectedCustomer.requested, inventory[selectedCustomer.product])} value={saleQuantity} onChange={(event) => setSaleQuantity(Number(event.target.value))} />
-                        <div className="live-tradeoff">
-                          <span><small>Notes into the cash tin</small><strong>+{formatCash(saleQuantity * PRODUCTS[selectedCustomer.product].price)}</strong></span>
-                          <span><small>Packs left on shelf</small><strong>{inventory[selectedCustomer.product] - saleQuantity}</strong></span>
-                          <span className={selectedCustomer.id === "rashidi-sale" && inventory.seed - saleQuantity < 4 ? "warning" : "good"}><small>{selectedCustomer.id === "rashidi-sale" ? "For Rehema later" : "Final shelf result"}</small><strong>{selectedCustomer.id === "rashidi-sale" ? inventory.seed - saleQuantity >= 4 ? "Enough for 4" : `${4 - (inventory.seed - saleQuantity)} short` : `${inventory.seed - saleQuantity} left`}</strong></span>
-                          <span><small>Wall clock afterwards</small><strong>{formatTime(minutes + 25)}</strong></span>
+                    {selectedCustomer.kind === "sale" && (
+                      <div className="sale-builder play-choice">
+                        <div className="shelf-game" aria-label={`${inventory[selectedCustomer.product]} seed packs on the shelf`}>
+                          <div className="shelf-top"><span>Wooden shelf</span><strong>{inventory[selectedCustomer.product]} packs</strong></div>
+                          <div className="seed-packets">{Array.from({ length: inventory[selectedCustomer.product] }, (_, index) => <span key={index} className={selectedCustomer.id === "rashidi-sale" && index >= inventory.seed - 4 ? "future-pack" : ""}>🌱</span>)}{inventory[selectedCustomer.product] === 0 && <em>empty</em>}</div>
+                          {selectedCustomer.id === "rashidi-sale" && <div className="future-shelf-key"><i /> Rehema may need four</div>}
+                          {selectedCustomer.id === "neema-finale" && demoLateMinutes > 0 && <div className="late-chip">⏰ Group waited {demoLateMinutes} min</div>}
                         </div>
-                        <button className="primary-button" type="button" onClick={completeSale}>{saleQuantity === selectedCustomer.requested ? `Hand ${selectedCustomer.name} the full request` : saleQuantity === 0 ? "Explain that the shelf is empty" : `Offer ${saleQuantity} packs and explain why`}</button>
+                        <span className="choice-question">What does Amina put on the counter?</span>
+                        <div className="story-choice-grid">
+                          {saleChoices.map((choice) => <button key={`${choice.label}-${choice.quantity}`} className={choice.tone ?? ""} type="button" onClick={() => completeSale(choice.quantity)}><span>{choice.icon}</span><strong>{choice.label}</strong><small>{choice.note}</small></button>)}
+                        </div>
                       </div>
                     )}
 
-                    {coachReady && selectedCustomer.kind === "credit" && (
-                      <div className="credit-builder">
+                    {selectedCustomer.kind === "credit" && (
+                      <div className="credit-builder play-choice">
+                        <div className="counter-props"><span>💵</span><strong>TSh 220k today</strong><i /> <span>📓</span><strong>A promise for later?</strong></div>
                         <div className="evidence-desk">
-                          <button type="button" className={creditChecks.ledger ? "checked" : ""} onClick={() => setCreditChecks((current) => ({ ...current, ledger: true }))}><span>📒</span><strong>Turn back through Rehema&apos;s old account</strong><small>{creditChecks.ledger ? "✓ Two smaller balances were paid on the promised dates." : "+10 min · read the old entries"}</small></button>
-                          <button type="button" className={creditChecks.buyer ? "checked" : ""} onClick={() => setCreditChecks((current) => ({ ...current, buyer: true }))}><span>📞</span><strong>Call the vegetable buyer</strong><small>{creditChecks.buyer ? "✓ The buyer confirms a smaller order next month." : "+15 min · hear the buyer directly"}</small></button>
+                          <button type="button" className={creditChecks.ledger ? "checked" : ""} onClick={() => setCreditChecks((current) => ({ ...current, ledger: true }))}><span>📒</span><strong>Check old account</strong><small>{creditChecks.ledger ? "✓ Paid on time" : "+10 min"}</small></button>
+                          <button type="button" className={creditChecks.buyer ? "checked" : ""} onClick={() => setCreditChecks((current) => ({ ...current, buyer: true }))}><span>📞</span><strong>Call her buyer</strong><small>{creditChecks.buyer ? "✓ Order confirmed" : "+15 min"}</small></button>
                         </div>
-                        <span className="section-label">Build an agreement Rehema can carry home</span>
-                        <div className="package-grid simple-packages">
-                          {CREDIT_OPTIONS.map((option) => {
+                        <span className="choice-question">Choose Rehema&apos;s basket</span>
+                        <div className="package-grid simple-packages lighter-packages">
+                          {CREDIT_OPTIONS.filter((option) => option.id !== "large" || showBigCreditOption).map((option) => {
                             const feasible = packageIsFeasible(option);
-                            return <button key={option.id} type="button" disabled={!feasible} className={creditOptionId === option.id ? "selected" : ""} onClick={() => setCreditOptionId(option.id)}><strong>{option.label}</strong><span>{formatCash(option.value)}</span><small>{option.explanation}</small><em>{option.seed} seed · {option.fertilizer} fertilizer{option.drip ? ` · ${option.drip} drip` : ""}</em>{!feasible && <b>Not enough stock remains</b>}</button>;
+                            const balance = Math.max(0, option.value - 220000);
+                            return <button key={option.id} type="button" disabled={!feasible} className={creditOptionId === option.id ? "selected" : ""} onClick={() => setCreditOptionId(option.id)}><span className="basket-goods">{"🌱".repeat(option.seed)}{"🧺".repeat(option.fertilizer)}{option.drip ? "💧" : ""}</span><strong>{option.label}</strong><small>{balance ? `${formatCash(balance)} after harvest` : "Nothing owed later"}</small>{!feasible && <b>Not enough on shelf</b>}</button>;
                           })}
                         </div>
-                        <div className="live-tradeoff">
-                          <span><small>Seed left on shelf</small><strong>{inventory.seed - selectedCreditOption.seed}</strong></span>
-                          <span><small>Notes in the cash tin</small><strong>+{formatCash(creditDeposit)}</strong></span>
-                          <span className={creditBalance > 300000 ? "warning" : "good"}><small>Promise written for later</small><strong>{formatCash(creditBalance)}</strong></span>
-                          <span><small>Wall clock afterwards</small><strong>{formatTime(minutes + creditTimeCost)}</strong></span>
-                        </div>
-                        <button className="primary-button" type="button" disabled={!packageIsFeasible()} onClick={completeCredit}>Write the agreement and pack Rehema&apos;s order</button>
+                        {!showBigCreditOption && <button className="quiet-option" type="button" onClick={() => setShowBigCreditOption(true)}>Show the bigger, riskier basket</button>}
+                        <div className="agreement-strip"><span>💵 Today <b>{formatCash(creditDeposit)}</b></span><span>✍ Later <b>{creditBalance ? formatCash(creditBalance) : "none"}</b></span><span>🕒 <b>+{creditTimeCost} min</b></span></div>
+                        <button className="primary-button" type="button" disabled={!packageIsFeasible()} onClick={completeCredit}>Stamp this agreement</button>
                       </div>
                     )}
 
-                    {coachReady && selectedCustomer.kind === "advice" && (
-                      <div className="advice-builder">
+                    {selectedCustomer.kind === "advice" && (
+                      <div className="advice-builder play-choice">
                         <div className={`deadline-banner ${minutes >= DEMO_DEADLINE ? "late" : minutes >= DEMO_DEADLINE - 20 ? "warning" : ""}`} role="status">
-                          <span>⏰</span><div><strong>The model-plot group arrives at 3:00 PM</strong><p>{minutes < DEMO_DEADLINE ? `${DEMO_DEADLINE - minutes} minutes remain. Each action below turns the hands of the clock.` : `The group has been waiting for ${minutes - DEMO_DEADLINE} minutes.`}</p></div><b>{formatTime(minutes)}</b>
+                          <span>⏰</span><div><strong>Demo at 3:00 PM</strong><p>{minutes < DEMO_DEADLINE ? `${DEMO_DEADLINE - minutes} minutes left` : `${minutes - DEMO_DEADLINE} minutes late`}</p></div><b>{formatTime(minutes)}</b>
                         </div>
                         <div className="evidence-desk three">
-                          <button type="button" className={adviceChecks.leaf ? "checked" : ""} onClick={() => inspectAdvice("leaf", 10)}><span>🍃</span><strong>Inspect the leaf</strong><small>{adviceChecks.leaf ? "✓ The spots may have more than one cause." : "+10 min · look before deciding"}</small></button>
-                          <button type="button" className={adviceChecks.label ? "checked" : ""} onClick={() => inspectAdvice("label", 10)}><span>🧪</span><strong>Read seller&apos;s label</strong><small>{adviceChecks.label ? "✓ Registration and batch details are missing." : "+10 min · check the product"}</small></button>
-                          <button type="button" className={adviceChecks.consultant ? "checked" : ""} onClick={() => inspectAdvice("consultant", 20)}><span>📞</span><strong>Call the agronomist</strong><small>{adviceChecks.consultant ? "✓ She asks for photos and replies before the demo." : "+20 min · create a warm referral"}</small></button>
+                          <button type="button" className={adviceChecks.leaf ? "checked" : ""} onClick={() => inspectAdvice("leaf", 10)}><span>🍃</span><strong>Inspect leaf</strong><small>{adviceChecks.leaf ? "✓ Several possible causes" : "+10 min"}</small></button>
+                          <button type="button" className={adviceChecks.label ? "checked" : ""} onClick={() => inspectAdvice("label", 10)}><span>🧪</span><strong>Read label</strong><small>{adviceChecks.label ? "✓ Details missing" : "+10 min"}</small></button>
+                          <button type="button" className={adviceChecks.consultant ? "checked" : ""} onClick={() => inspectAdvice("consultant", 20)}><span>📞</span><strong>Call agronomist</strong><small>{adviceChecks.consultant ? "✓ She expects Juma" : "+20 min"}</small></button>
                         </div>
-                        <span className="section-label">Juma is watching. What does Amina do?</span>
+                        <span className="choice-question">Juma is watching. What does Amina do?</span>
                         <div className="advice-actions consequence-actions">
-                          <button type="button" onClick={() => completeAdvice("verify")}><strong>Keep the leaf for a proper check</strong><small>Costs TSh 40k · takes {adviceTimeCost("verify")} min · {deadlineLabel(minutes + adviceTimeCost("verify"))}</small></button>
-                          <button type="button" disabled={inventory.cropCare < 1} onClick={() => completeAdvice("sell")}><strong>Put a bottle on the counter now</strong><small>Brings TSh 160k · takes {adviceTimeCost("sell")} min · {deadlineLabel(minutes + adviceTimeCost("sell"))}</small></button>
-                          <button type="button" onClick={() => completeAdvice("refer")}><strong>Send Juma to the agronomist</strong><small>No sale · takes {adviceTimeCost("refer")} min · {deadlineLabel(minutes + adviceTimeCost("refer"))}</small></button>
+                          <button type="button" onClick={() => completeAdvice("verify")}><span>🔎</span><strong>Pay for a proper check</strong><small>−TSh 40k · +25 min</small></button>
+                          <button type="button" disabled={inventory.cropCare < 1} onClick={() => completeAdvice("sell")}><span>🧪</span><strong>Sell the bottle now</strong><small>+TSh 160k · +15 min</small></button>
+                          <button type="button" onClick={() => completeAdvice("refer")}><span>🤝</span><strong>Introduce the agronomist</strong><small>No sale · +20 min</small></button>
                         </div>
                       </div>
                     )}
@@ -1137,15 +1141,15 @@ export default function Home() {
 
                 {impactStep === 1 && (
                   <div className="consequence-scene">
-                    <span className="eyebrow">Amina looks around the Centre</span>
-                    <h2>One choice has already moved the day</h2>
+                    <span className="eyebrow">Watch it happen</span>
+                    <h2>The choice travels</h2>
                     <p className="impact-summary">{impact.summary}</p>
-                    <div className="impact-grid">
-                      {impact.changes.map((change) => (
-                        <div key={change.label} className={change.tone ?? "neutral"}><span>{change.icon}</span><small>{change.label}</small><div><del>{change.before}</del><b>→</b><strong>{change.after}</strong></div></div>
+                    <div className="ripple-track">
+                      {impact.changes.filter((change) => change.before !== change.after).map((change) => (
+                        <article key={change.label} className={change.tone ?? "neutral"}><span>{change.icon}</span><div><small>{change.label}</small><p><del>{change.before}</del><b>→</b><strong>{change.after}</strong></p></div></article>
                       ))}
                     </div>
-                    <button className="primary-button paper-button" type="button" onClick={() => { setImpactStep(2); playTone(660, 0.08); }}>The paperwork is still on the counter →</button>
+                    <button className="primary-button paper-button" type="button" onClick={() => { setImpactStep(2); playTone(660, 0.08); }}>Pick up the paper slip →</button>
                   </div>
                 )}
 

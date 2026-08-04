@@ -7,8 +7,8 @@ The prototype follows one connected vuli market day rather than several thin cou
 ## The market-day story
 
 1. A short sentence-by-sentence briefing establishes Amina's fixed stock and known commitments.
-2. Rashidi offers cash for five of the eight seed packs. The interface shows how many would remain for Mama Rehema.
-3. Rehema asks for credit. The player may check her record and buyer, then choose one of three understandable packages.
+2. Rashidi offers cash for five of the eight seed packs. The player chooses between two visible ways to share the shelf—there is no quantity slider.
+3. Rehema asks for credit. The player may check her record and buyer, then choose between two visible baskets; a larger risk stays behind an optional secondary action.
 4. Juma arrives at 2:00 PM with an uncertain crop problem. Evidence checks advance the clock toward a real 3:00 PM demonstration deadline.
 5. Neema brings the final demonstration-group request, reflecting both earlier stock allocation and whether Amina arrived on time.
 6. The community returns at closing, the books reconcile, and a transparent Balanced Centre Score explains the result.
@@ -22,9 +22,11 @@ Stock ordering and demand forecasting are intentionally outside this beginner pr
 - Context appears one short line at a time.
 - Decision controls unlock only after the player hears the request.
 - Only the current encounter is revealed; later characters enter through the story.
-- After every request, Coach Zawadi presents three curriculum-grounded prompts in counter language: look at the counter, think one step ahead, and leave a paper trail.
+- After every request, Coach Zawadi offers one curriculum-grounded sentence. “Why?” reveals a short explanation; the full lesson remains in her desk panel.
+- Decisions use physical objects and short actions: seed packets on a wooden shelf, notes beside a notebook, evidence objects, and a moving clock.
+- A decision screen avoids paragraphs, sliders, and dense forecasts. Detailed consequences appear only after the choice.
 - Customers grin, hesitate, redraw plans, ask follow-up questions, or carry worries away according to the player's choice.
-- A consequence scene follows the reaction and shows before-and-after cash, stock, time, trust, or credit.
+- A consequence scene follows the reaction and animates only the cash, stock, time, trust, or credit values that actually changed.
 - Each consequence creates source documents that the player classifies into the cash ledger, inventory card, customer credit ledger, expense ledger, or follow-up log.
 - Incorrect bookkeeping choices receive an instructional Coach explanation and can be corrected without blocking the learner.
 - The 3:00 PM deadline changes the following scene and the closing outcome; elapsed time comes from in-game actions rather than reading speed.

@@ -12,7 +12,7 @@ test("models one connected Tanzania market day", async () => {
   assert.match(page, /rehema-credit/);
   assert.match(page, /juma-advice/);
   assert.match(page, /neema-finale/);
-  assert.match(page, /Rashidi leans his bicycle/);
+  assert.match(page, /Rashidi parks his bicycle/);
   assert.match(page, /Juma hurries in with a tomato leaf/);
   assert.doesNotMatch(page, /Run the shop for five days|Day \{dayIndex/);
 });
@@ -23,8 +23,12 @@ test("uses fixed stock allocation instead of stock-order forecasting", async () 
   assert.match(page, /supplier's truck will not reach us today/);
   assert.match(page, /Shelf and back room/);
   assert.match(page, /Eight packs were counted this morning/);
-  assert.match(page, /For Rehema later/);
+  assert.match(page, /Rehema may need four/);
   assert.match(page, /No truck is coming to rescue an empty shelf/);
+  assert.match(page, /saleChoicesFor/);
+  assert.match(page, /Fill his bicycle crate/);
+  assert.match(page, /Share the shelf/);
+  assert.doesNotMatch(page, /type="range"|sale-quantity/);
   assert.doesNotMatch(page, /Plan today&apos;s stock order|Cover the lower estimate|Add a small safety buffer|openSupplier|orderDraft/);
 });
 
@@ -35,7 +39,7 @@ test("reveals conversations before showing decisions", async () => {
   assert.match(page, /customerLineIndex < customerLines.length/);
   assert.match(page, /First, hear them out/);
   assert.match(page, /Respond to the request/);
-  assert.match(page, /The counter is quiet\. Amina's choice comes next/);
+  assert.match(page, /Your move/);
   assert.match(page, /scene-setting/);
 });
 
@@ -50,19 +54,24 @@ test("lets customers react before revealing the wider trade-off", async () => {
   assert.match(page, /Rehema traces/);
   assert.match(page, /Juma wraps/);
   assert.match(page, /Watch the choice travel/);
-  assert.match(page, /One choice has already moved the day/);
-  assert.match(page, /The paperwork is still on the counter/);
+  assert.match(page, /The choice travels/);
+  assert.match(page, /ripple-track/);
+  assert.match(page, /Pick up the paper slip/);
   assert.match(page, /Cash in the tin/);
-  assert.match(page, /Credit still owed/);
+  assert.match(page, /Rehema still owes/);
 });
 
-test("keeps representative BLF learning inside the story", async () => {
+test("keeps BLF learning available without blocking play", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
 
-  assert.match(page, /Turn back through Rehema&apos;s old account/);
-  assert.match(page, /Call the vegetable buyer/);
-  assert.match(page, /Keep the leaf for a proper check/);
-  assert.match(page, /Coach Zawadi has a thought/);
+  assert.match(page, /Check old account/);
+  assert.match(page, /Call her buyer/);
+  assert.match(page, /Pay for a proper check/);
+  assert.match(page, /Count what will remain after his bicycle leaves/);
+  assert.match(page, /A promise is safer when both people can see the date/);
+  assert.match(page, /Which mistake could hurt Juma most/);
+  assert.match(page, /coach-why-button/);
+  assert.match(page, />\{coachExpanded \? "Hide" : "Why\?"\}</);
   assert.match(page, /Look at the counter/);
   assert.match(page, /Think one step ahead/);
   assert.match(page, /Leave a paper trail/);
@@ -91,7 +100,8 @@ test("makes the demonstration deadline and final score consequential", async () 
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
 
   assert.match(page, /DEMO_DEADLINE = 900/);
-  assert.match(page, /Each action below turns the hands of the clock/);
+  assert.match(page, /Demo at 3:00 PM/);
+  assert.match(page, /minutes left/);
   assert.match(page, /inspectAdvice\("consultant", 20\)/);
   assert.match(page, /The model-farm demonstration started/);
   assert.match(page, /Balanced Centre Score breakdown/);
