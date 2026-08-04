@@ -5,6 +5,8 @@ import { useCallback, useMemo, useRef, useState } from "react";
 type Metrics = { cash: number; readiness: number; trust: number };
 type ProductKey = "seed" | "fertilizer" | "cropCare" | "drip";
 type Inventory = Record<ProductKey, number>;
+type DemandRange = { min: number; max: number };
+type DemandForecast = Record<ProductKey, DemandRange>;
 type Position = { x: number; y: number };
 type Phase = "title" | "morning" | "shop" | "evening" | "end";
 type FocusId = "stocktake" | "followup" | "modelFarm";
@@ -63,6 +65,7 @@ type AdviceId = "verify" | "sell" | "refer";
 const INITIAL_METRICS: Metrics = { cash: 4800000, readiness: 48, trust: 68 };
 const INITIAL_INVENTORY: Inventory = { seed: 12, fertilizer: 8, cropCare: 4, drip: 2 };
 const START_POSITION: Position = { x: 51, y: 77 };
+const PRODUCT_KEYS: ProductKey[] = ["seed", "fertilizer", "cropCare", "drip"];
 
 const PRODUCTS: Record<
   ProductKey,
@@ -140,9 +143,9 @@ const MORNING_FOCUSES: Array<{
   {
     id: "stocktake",
     icon: "📦",
-    label: "Count the stockroom",
-    copy: "Review fast-moving products before opening.",
-    effect: "Supplier transport is cheaper today; +3 readiness.",
+    label: "Count stock before Musa's truck",
+    copy: "Check every shelf and join today's shared delivery route.",
+    effect: "Clear stock numbers, lower transport cost; +3 readiness.",
   },
   {
     id: "followup",
@@ -175,12 +178,12 @@ const CREDIT_PACKAGES: Array<{
 
 const NOTES: Record<string, { title: string; copy: string }> = {
   starting: {
-    title: "Working capital lives on the shelf",
-    copy: "Stock can serve future demand, but cash committed today cannot pay another bill tomorrow.",
+    title: "Stock uses business cash",
+    copy: "Stock can serve future customers, but money used for stock cannot pay another bill today.",
   },
   supplier: {
-    title: "Order cost is more than unit price",
-    copy: "Transport, timing, and the option to reserve later stock all change the real cost of inventory.",
+    title: "Use records to decide how much to order",
+    copy: "Compare stock on the shelf with recent sales, seasonal demand, and a small buffer. More stock may prevent shortages, but it also uses cash.",
   },
   credit: {
     title: "Customer credit needs a living ledger",
@@ -191,6 +194,55 @@ const NOTES: Record<string, { title: string; copy: string }> = {
     copy: "Observation, diagnosis, product quality, safe use, and referral protect both the farmer and the Centre.",
   },
 };
+
+const emptyForecast = (): DemandForecast => ({
+  seed: { min: 0, max: 0 },
+  fertilizer: { min: 0, max: 0 },
+  cropCare: { min: 0, max: 0 },
+  drip: { min: 0, max: 0 },
+});
+
+const addDemand = (
+  forecast: DemandForecast,
+  key: ProductKey,
+  min: number,
+  max = min,
+) => {
+  forecast[key].min += min;
+  forecast[key].max += max;
+};
+
+function futureDemandAfterDay(
+  dayIndex: number,
+  demandBoost: number,
+  hasFarmerCalls: boolean,
+): DemandForecast {
+  const forecast = emptyForecast();
+  const rainSignalKnown = dayIndex >= 2;
+  const rainMin = rainSignalKnown ? demandBoost : hasFarmerCalls ? Math.max(2, demandBoost - 1) : 2;
+  const rainMax = rainSignalKnown ? demandBoost : hasFarmerCalls ? Math.min(7, demandBoost + 1) : 7;
+
+  if (dayIndex < 1) {
+    addDemand(forecast, "seed", 4);
+    addDemand(forecast, "seed", 2, 6);
+    addDemand(forecast, "fertilizer", 1, 5);
+    addDemand(forecast, "drip", 0, 2);
+  }
+
+  if (dayIndex < 2) {
+    addDemand(forecast, "seed", 5 + rainMin, 5 + rainMax);
+    addDemand(forecast, "fertilizer", 5);
+  }
+
+  if (dayIndex < 3) addDemand(forecast, "cropCare", 2);
+
+  if (dayIndex < 4) {
+    addDemand(forecast, "seed", 4 + Math.floor(rainMin / 2), 4 + Math.floor(rainMax / 2));
+    addDemand(forecast, "fertilizer", 4);
+  }
+
+  return forecast;
+}
 
 const clampPercent = (value: number) => Math.max(0, Math.min(100, value));
 
@@ -212,6 +264,8 @@ const formatDelta = (value: number, cash = false) => {
   if (cash) return `${value > 0 ? "+" : ""}${formatCash(value)}`;
   return `${value > 0 ? "+" : ""}${value}`;
 };
+
+const formatDemandRange = ({ min, max }: DemandRange) => (min === max ? `${min}` : `${min}–${max}`);
 
 function customersForDay(dayIndex: number, demandBoost: number): Customer[] {
   if (dayIndex === 0) {
@@ -394,6 +448,24 @@ export default function Home() {
     0,
   );
   const orderTotal = orderProductCost + (orderUnits > 0 ? transportFee : 0) + (reserveDraft ? 120000 : 0);
+  const todayDemand = emptyForecast();
+  unresolvedCustomers.forEach((customer) => {
+    if (customer.kind === "sale") addDemand(todayDemand, customer.product, customer.requested);
+    if (customer.kind === "credit") {
+      addDemand(todayDemand, "seed", 2, 6);
+      addDemand(todayDemand, "fertilizer", 1, 5);
+      addDemand(todayDemand, "drip", 0, 2);
+    }
+  });
+  const demandForecast = futureDemandAfterDay(dayIndex, season.demandBoost, followupDays > 0);
+  PRODUCT_KEYS.forEach((key) => {
+    addDemand(demandForecast, key, todayDemand[key].min, todayDemand[key].max);
+  });
+  const forecastSource = dayIndex >= 2
+    ? "The rain signal is now known, so the range is narrower."
+    : followupDays > 0
+      ? "Farmer calls sharpen the estimate, but rain timing still creates a range."
+      : "Based on registrations, recent vuli sales, the waiting queue, and uncertain rain timing.";
 
   const playTone = useCallback(
     (frequency = 560, duration = 0.07) => {
@@ -448,7 +520,7 @@ export default function Home() {
     if (morningFocus === "stocktake") {
       nextMetrics = applyEffects(metrics, { readiness: 3 });
       setStocktakeActive(true);
-      focusNote = "Completed a stocktake; Musa offers a lower transport fee today.";
+      focusNote = "Counted every shelf and joined Musa's shared delivery route for a lower transport cost.";
     } else if (morningFocus === "followup") {
       nextMetrics = applyEffects(metrics, { trust: 3 });
       setFollowupDays((current) => current + 1);
@@ -627,6 +699,17 @@ export default function Home() {
 
   const updateOrder = (key: ProductKey, change: number) => {
     setOrderDraft((current) => ({ ...current, [key]: Math.max(0, Math.min(30, current[key] + change)) }));
+  };
+
+  const applyDemandPlan = (plan: "lower" | "buffer") => {
+    const nextOrder = PRODUCT_KEYS.reduce<Inventory>((draft, key) => {
+      const range = demandForecast[key];
+      const target = plan === "lower" ? range.min : Math.ceil((range.min + range.max) / 2);
+      draft[key] = Math.max(0, Math.min(30, target - inventory[key]));
+      return draft;
+    }, { seed: 0, fertilizer: 0, cropCare: 0, drip: 0 });
+    setOrderDraft(nextOrder);
+    setToast(plan === "lower" ? "Draft order now covers the lower demand estimate." : "Draft order now includes a small demand buffer.");
   };
 
   const openSupplier = () => {
@@ -1017,7 +1100,105 @@ export default function Home() {
 
                 {toolPanel === "inventory" && <><span className="eyebrow">Live stockroom</span><h2>What is actually on the shelf?</h2><div className="inventory-grid">{(Object.keys(PRODUCTS) as ProductKey[]).map((key) => <div key={key}><span>{PRODUCTS[key].icon}</span><strong>{inventory[key]}</strong><small>{PRODUCTS[key].label}</small><em>Buy {formatCash(PRODUCTS[key].cost)} · Sell {formatCash(PRODUCTS[key].price)}</em></div>)}</div><button className="primary-button" type="button" onClick={openSupplier}>Call Musa to order stock</button></>}
 
-                {toolPanel === "supplier" && <><span className="eyebrow">Musa · distributor in Arusha</span><h2>Build a supplier order</h2><p className="sheet-intro">Every delivery has a transport cost. Stock arrives today, but cash leaves immediately.</p><div className="order-grid">{(Object.keys(PRODUCTS) as ProductKey[]).map((key) => <div key={key}><span>{PRODUCTS[key].icon}</span><div><strong>{PRODUCTS[key].shortLabel}</strong><small>{formatCash(PRODUCTS[key].cost)} each</small></div><div className="stepper"><button type="button" aria-label={`Remove ${PRODUCTS[key].shortLabel}`} onClick={() => updateOrder(key, -1)}>−</button><strong>{orderDraft[key]}</strong><button type="button" aria-label={`Add ${PRODUCTS[key].shortLabel}`} onClick={() => updateOrder(key, 1)}>+</button></div></div>)}</div>{reserveStatus === "none" && <label className="reserve-option"><input type="checkbox" checked={reserveDraft} onChange={(event) => setReserveDraft(event.target.checked)} /><span><strong>Reserve 12 additional seed packs</strong><small>Pay TSh 120,000 now. Decide after the forecast whether to pay the remaining TSh 540,000.</small></span></label>}<div className="order-total"><span>Products <strong>{formatCash(orderProductCost)}</strong></span><span>Transport {stocktakeActive && <em>stocktake discount</em>} <strong>{orderUnits > 0 ? formatCash(transportFee) : formatCash(0)}</strong></span>{reserveDraft && <span>Reservation deposit <strong>{formatCash(120000)}</strong></span>}<b>Total today <strong>{formatCash(orderTotal)}</strong></b></div><button className="primary-button" type="button" disabled={orderTotal <= 0 || orderTotal > metrics.cash} onClick={placeSupplierOrder}>{orderTotal > metrics.cash ? "Not enough available capital" : "Place order and pay"}</button></>}
+                {toolPanel === "supplier" && (
+                  <>
+                    <span className="eyebrow">Musa · distributor in Arusha</span>
+                    <h2>Plan today&apos;s stock order</h2>
+                    <p className="sheet-intro">Use the demand estimate below, then decide how much cash you want to keep available. Stock arrives today.</p>
+
+                    <div className="demand-board">
+                      <div className="demand-board-heading">
+                        <span aria-hidden="true">🧮</span>
+                        <div>
+                          <strong>Amina&apos;s demand estimate</strong>
+                          <small>Expected units from now {dayIndex === DAYS.length - 1 ? "until closing" : "through Saturday"}</small>
+                        </div>
+                      </div>
+                      <p>{forecastSource}</p>
+                      <div className="demand-guide">
+                        <span><b>Lower number</b> likely demand</span>
+                        <span><b>Upper number</b> possible busy-week demand</span>
+                      </div>
+                    </div>
+
+                    <span className="section-label">Choose a starting plan, or build your own</span>
+                    <div className="plan-presets">
+                      <button type="button" onClick={() => applyDemandPlan("lower")}>
+                        <strong>Cover the lower estimate</strong>
+                        <small>Uses less cash, but a busy week may cause a stock-out.</small>
+                      </button>
+                      <button type="button" onClick={() => applyDemandPlan("buffer")}>
+                        <strong>Add a small safety buffer</strong>
+                        <small>Uses more cash and aims for the middle of the range.</small>
+                      </button>
+                    </div>
+
+                    <div className="order-grid">
+                      {PRODUCT_KEYS.map((key) => {
+                        const stockAfterOrder = inventory[key] + orderDraft[key];
+                        const demand = demandForecast[key];
+                        let signalClass = "balanced";
+                        let signal = "Within the expected range";
+                        if (demand.max === 0) {
+                          signalClass = stockAfterOrder > 0 ? "extra" : "balanced";
+                          signal = stockAfterOrder > 0 ? "No demand signal yet" : "No demand expected";
+                        } else if (stockAfterOrder < demand.min) {
+                          signalClass = "short";
+                          signal = `${demand.min - stockAfterOrder} short of the lower estimate`;
+                        } else if (stockAfterOrder > demand.max) {
+                          signalClass = "extra";
+                          signal = `${stockAfterOrder - demand.max} above the upper estimate`;
+                        }
+
+                        return (
+                          <div className={`order-line ${signalClass}`} key={key}>
+                            <span className="order-product-icon">{PRODUCTS[key].icon}</span>
+                            <div className="order-product-main">
+                              <div className="order-product-title">
+                                <strong>{PRODUCTS[key].shortLabel}</strong>
+                                <small>{formatCash(PRODUCTS[key].cost)} each</small>
+                              </div>
+                              <div className="demand-numbers">
+                                <span>On shelf <b>{inventory[key]}</b></span>
+                                <span>Waiting today <b>{formatDemandRange(todayDemand[key])}</b></span>
+                                <span>Expected {dayIndex === DAYS.length - 1 ? "today" : "this week"} <b>{formatDemandRange(demand)}</b></span>
+                              </div>
+                              <div className="stock-result">
+                                <span>After this order: <b>{stockAfterOrder}</b></span>
+                                <strong>{signal}</strong>
+                              </div>
+                            </div>
+                            <div className="order-stepper">
+                              <small>Order now</small>
+                              <div className="stepper">
+                                <button type="button" aria-label={`Remove ${PRODUCTS[key].shortLabel}`} onClick={() => updateOrder(key, -1)}>−</button>
+                                <strong>{orderDraft[key]}</strong>
+                                <button type="button" aria-label={`Add ${PRODUCTS[key].shortLabel}`} onClick={() => updateOrder(key, 1)}>+</button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {reserveStatus === "none" && (
+                      <label className="reserve-option">
+                        <input type="checkbox" checked={reserveDraft} onChange={(event) => setReserveDraft(event.target.checked)} />
+                        <span><strong>Keep an option for 12 more seed packs</strong><small>Pay TSh 120,000 now. After the rain update, choose whether to pay the remaining TSh 540,000.</small></span>
+                      </label>
+                    )}
+                    <div className="order-total">
+                      <span>Products <strong>{formatCash(orderProductCost)}</strong></span>
+                      <span>Transport {stocktakeActive && <em>shared-route price</em>} <strong>{orderUnits > 0 ? formatCash(transportFee) : formatCash(0)}</strong></span>
+                      {reserveDraft && <span>Seed option deposit <strong>{formatCash(120000)}</strong></span>}
+                      <b>Total paid today <strong>{formatCash(orderTotal)}</strong></b>
+                      <span>Cash left after payment <strong>{formatCash(Math.max(0, metrics.cash - orderTotal))}</strong></span>
+                    </div>
+                    <button className="primary-button" type="button" disabled={orderTotal <= 0 || orderTotal > metrics.cash} onClick={placeSupplierOrder}>
+                      {orderTotal > metrics.cash ? "This order costs more cash than you have" : "Place order and pay"}
+                    </button>
+                  </>
+                )}
 
                 {toolPanel === "ledger" && <><span className="eyebrow">Business ledger</span><h2>Promises still moving through the week</h2>{pendingOutcomes.length === 0 ? <p className="empty-state">No unsettled customer promises yet.</p> : <div className="pending-list">{pendingOutcomes.map((outcome) => <div key={outcome.id}><span>Due Day {outcome.dueDay + 1}</span><strong>{outcome.title}</strong><p>The final amount or relationship effect is still uncertain.</p></div>)}</div>}<span className="section-label">Completed days</span><div className="compact-log">{logs.length === 0 ? <p>No day has closed yet.</p> : logs.map((log) => <div key={log.day}><strong>{log.day}</strong><span>{log.served} served · {log.missed} missed</span><span>{formatDelta(log.cashDelta, true)} cash · {formatDelta(log.trustDelta)} trust</span></div>)}</div></>}
 

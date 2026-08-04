@@ -62,6 +62,21 @@ There is no mandatory evidence count, multiple-choice “correct answer,” or f
 - Day-end recaps show state changes in the business rather than grading the player.
 - Replay rotates among late, early, and uneven rain scenarios so the same stock choice can produce a different result.
 
+## ALP material used to shape the scenarios
+
+The scenario mechanics were checked against the agribusiness-retailer learning path and its beginner short messages. The game uses the following content as behavior to practise, rather than text to recite:
+
+| ALP topic | Learning-material emphasis | Simulation mechanic |
+| --- | --- | --- |
+| Inventory Management Methods | Use past sales, demand patterns, seasonality, buffer stock, forecasting, and regular stock checks | A visible demand range, live shelf stock, lower-estimate and safety-buffer starting plans, plus manual adjustment |
+| Supplier Relationships | Prepare for delays and higher costs; use creative financing and stronger supplier relationships | Arusha transport cost, same-day ordering, and a paid option for later seed stock |
+| Credit for Customers | Set limits and terms, use written agreements, monitor borrowers, keep a credit ledger, and assess repayment history | Package sizing, deposit and payment timing, ledger and buyer checks, and delayed repayment results |
+| Customer Care | Solve customer problems with empathy; service affects repeat sales and referrals | Full, partial, or missed service changes trust and later community word-of-mouth |
+| Controlling Costs | Understand costs before setting prices and committing cash | Product cost, transport, total paid today, and cash remaining are shown together |
+| Managing Risk | Identify threats early and take practical steps to reduce exposure | Rain uncertainty, stock options, verified crop advice, and delayed outcomes |
+
+For beginner clarity, the game avoids unexplained inventory jargon. The order screen directly answers: **What is on the shelf? What might farmers need? What will be on the shelf after this order?** The range is intentionally visible; uncertainty comes from the season, not from missing information.
+
 ## Content boundary
 
 The game is a learning prototype, not agronomic, financial, or regulatory advice. Product registration, diagnosis, credit terms, local prices, crop calendars, and treatment decisions should be localized and reviewed by Tanzania-based subject-matter experts before learner deployment.

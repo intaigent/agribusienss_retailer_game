@@ -19,10 +19,15 @@ test("models a five-day Tanzania retailer week instead of a lesson sequence", as
 test("lets the player operate the Centre and make trade-offs", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
 
-  assert.match(page, /Count the stockroom/);
+  assert.match(page, /Count stock before Musa's truck/);
   assert.match(page, /Call farmer clients/);
   assert.match(page, /Prepare the model farm/);
-  assert.match(page, /Build a supplier order/);
+  assert.match(page, /Plan today&apos;s stock order/);
+  assert.match(page, /Amina&apos;s demand estimate/);
+  assert.match(page, /Cover the lower estimate/);
+  assert.match(page, /Add a small safety buffer/);
+  assert.match(page, /Waiting today/);
+  assert.match(page, /After this order/);
   assert.match(page, /Quantity to sell/);
   assert.match(page, /Build the package/);
   assert.match(page, /Choose repayment timing/);
