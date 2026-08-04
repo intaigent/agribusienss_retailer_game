@@ -6,7 +6,7 @@ This is designed as a game, not a sequence of lessons. Across five shop days, th
 
 ## Core game loop
 
-1. Read the morning conditions and choose one operational priority.
+1. Click through a short, sentence-by-sentence morning scene, then choose one operational priority.
 2. Open the Centre and decide which people and business systems need attention.
 3. Compare stock with a beginner-friendly demand range, then sell, negotiate, order, or close early.
 4. Review the day's cash, trust, and readiness changes.
@@ -14,6 +14,8 @@ This is designed as a game, not a sequence of lessons. Across five shop days, th
 6. Replay with a different rain-and-demand scenario.
 
 The ALP Coach is optional. Learning ideas unlock in Amina's notebook through play instead of interrupting the game with mandatory explanations or quiz feedback.
+
+Morning briefings, customer requests, and the first supplier call use progressive disclosure: one short line appears at a time, and decision controls unlock only after the situation is clear. Returning to a supplier call on the same day skips the repeated introduction.
 
 The stock-order screen follows the ALP Inventory Management Methods material: it uses past sales, demand patterns, seasonality, a possible buffer stock, and regular stock checks. Players see a lower and upper demand estimate, can preserve more cash by covering the lower estimate or add a small safety buffer, and can still adjust every quantity themselves.
 

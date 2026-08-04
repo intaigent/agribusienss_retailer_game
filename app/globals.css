@@ -734,6 +734,104 @@ p {
   font-size: clamp(2.5rem, 5vw, 4rem);
 }
 
+.story-stage {
+  display: grid;
+  gap: 18px;
+  margin-top: 18px;
+  padding: clamp(18px, 3vw, 30px);
+  border: 3px solid var(--brown-dark);
+  border-radius: 4px;
+  background:
+    linear-gradient(rgba(255, 251, 229, 0.96), rgba(248, 229, 177, 0.96)),
+    repeating-linear-gradient(0deg, transparent 0 7px, rgba(91, 66, 42, 0.05) 7px 8px);
+  box-shadow: 0 5px 0 rgba(69, 50, 32, 0.35);
+}
+
+.morning-story {
+  min-height: 285px;
+  align-content: center;
+}
+
+.story-speaker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--green-deep);
+  font-size: 0.85rem;
+}
+
+.story-speaker > span {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border: 2px solid var(--brown-dark);
+  border-radius: 50%;
+  background: #e4ebb8;
+  font-size: 1.8rem;
+}
+
+.story-stage > p {
+  max-width: 680px;
+  margin: 0;
+  color: #3f3023;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: clamp(1rem, 2vw, 1.24rem);
+  font-weight: 700;
+  line-height: 1.55;
+  animation: story-line-in 220ms ease-out both;
+}
+
+.story-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 4px;
+}
+
+.story-progress {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 12px;
+}
+
+.story-dot {
+  width: 9px;
+  height: 9px;
+  border: 2px solid #7a6547;
+  border-radius: 50%;
+  background: transparent;
+}
+
+.story-dot.done {
+  background: #83a24d;
+}
+
+.story-dot.current {
+  width: 12px;
+  height: 12px;
+  background: var(--gold);
+  box-shadow: 0 0 0 2px #fff8dc;
+}
+
+.story-next {
+  width: auto;
+  min-width: 170px;
+}
+
+.morning-actions {
+  margin-top: 16px;
+  animation: story-line-in 220ms ease-out both;
+}
+
+.customer-story,
+.supplier-story {
+  min-height: 230px;
+  align-content: center;
+}
+
 .morning-brief {
   margin: 13px 0;
   padding: 10px 12px;
@@ -1653,6 +1751,11 @@ p {
   to { opacity: 1; transform: none; }
 }
 
+@keyframes story-line-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
 @keyframes toast-up {
   from { opacity: 0; transform: translate(-50%, 12px); }
   to { opacity: 1; transform: translate(-50%, 0); }
@@ -1908,6 +2011,20 @@ p {
   .evening-heading > span,
   .ending-header > span {
     font-size: 2rem;
+  }
+
+  .story-stage {
+    min-height: 235px;
+    padding: 16px;
+  }
+
+  .story-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .story-next {
+    width: 100%;
   }
 
   .evening-metrics,

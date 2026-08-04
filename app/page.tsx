@@ -39,6 +39,7 @@ type AdviceCustomer = Position & {
 };
 
 type Customer = SaleCustomer | CreditCustomer | AdviceCustomer;
+type StoryLine = { speaker: string; icon: string; text: string };
 
 type PendingOutcome = {
   id: string;
@@ -84,6 +85,11 @@ const DAYS = [
     weather: "☀️ 24°",
     title: "Opening week",
     briefing: "Registered farmers are preparing for vuli. Rain timing is uncertain and Arusha transport is costly.",
+    story: [
+      { speaker: "Amina", icon: "👩🏾‍💼", text: "Vuli planting is approaching, and registered farmers are beginning to buy inputs." },
+      { speaker: "Neema", icon: "👩🏾", text: "Seed and fertilizer requests are already reaching the Centre." },
+      { speaker: "Amina", icon: "👩🏾‍💼", text: "Rain timing is uncertain, and each Arusha delivery uses business cash." },
+    ] satisfies StoryLine[],
   },
   {
     date: "Wed · 4 Oct",
@@ -91,6 +97,11 @@ const DAYS = [
     weather: "⛅ 26°",
     title: "Credit and cash flow",
     briefing: "A loyal farmer needs a larger input package, while ordinary shop sales continue.",
+    story: [
+      { speaker: "Amina", icon: "👩🏾‍💼", text: "The first sales changed both my cash and the stock on my shelves." },
+      { speaker: "Mama Rehema", icon: "👩🏿‍🌾", text: "I can pay part today, but I need the rest of my inputs on credit." },
+      { speaker: "Amina", icon: "👩🏾‍💼", text: "I need to serve her without creating a balance the Centre cannot carry." },
+    ] satisfies StoryLine[],
   },
   {
     date: "Mon · 9 Oct",
@@ -98,6 +109,11 @@ const DAYS = [
     weather: "🌦️ 23°",
     title: "The rain signal",
     briefing: "Farmers react to the latest forecast. Seed demand may surge—or remain cautious.",
+    story: [
+      { speaker: "Radio report", icon: "📻", text: "The latest rain report has arrived." },
+      { speaker: "Amina", icon: "👩🏾‍💼", text: "Farmer demand will react to this signal." },
+      { speaker: "Musa", icon: "🧑🏿‍💼", text: "If you reserved seed, today is the day to take it or release it." },
+    ] satisfies StoryLine[],
   },
   {
     date: "Fri · 13 Oct",
@@ -105,6 +121,11 @@ const DAYS = [
     weather: "🌧️ 22°",
     title: "Advice under pressure",
     briefing: "A crop problem arrives before the model-farm demonstration. A quick sale could be tempting.",
+    story: [
+      { speaker: "Juma", icon: "🧑🏾‍🌾", text: "Spots appeared on my tomato leaves after the rain." },
+      { speaker: "Amina", icon: "👩🏾‍💼", text: "A fast sale could earn cash, but poor advice can harm a farmer and the Centre's trust." },
+      { speaker: "Amina", icon: "👩🏾‍💼", text: "I should separate what I see from what I know." },
+    ] satisfies StoryLine[],
   },
   {
     date: "Sat · 14 Oct",
@@ -112,6 +133,11 @@ const DAYS = [
     weather: "🌤️ 25°",
     title: "Demo and market day",
     briefing: "Promises, credit, and agronomic advice return as community word-of-mouth reaches the Centre.",
+    story: [
+      { speaker: "Amina", icon: "👩🏾‍💼", text: "Demo day brings farmers back to the Centre." },
+      { speaker: "Neema", icon: "👩🏾", text: "People are talking about which promises were kept and which advice worked." },
+      { speaker: "Amina", icon: "👩🏾‍💼", text: "Today's demand arrives together with the results of earlier decisions." },
+    ] satisfies StoryLine[],
   },
 ];
 
@@ -267,6 +293,9 @@ const formatDelta = (value: number, cash = false) => {
 
 const formatDemandRange = ({ min, max }: DemandRange) => (min === max ? `${min}` : `${min}–${max}`);
 
+const splitSentences = (text: string) =>
+  text.match(/[^.!?]+[.!?]+|[^.!?]+$/g)?.map((sentence) => sentence.trim()).filter(Boolean) ?? [text];
+
 function customersForDay(dayIndex: number, demandBoost: number): Customer[] {
   if (dayIndex === 0) {
     return [
@@ -407,8 +436,10 @@ export default function Home() {
   const [resolvedCustomers, setResolvedCustomers] = useState<string[]>([]);
   const [servedCustomerIds, setServedCustomerIds] = useState<string[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [customerLineIndex, setCustomerLineIndex] = useState(0);
   const [saleQuantity, setSaleQuantity] = useState(0);
   const [morningFocus, setMorningFocus] = useState<FocusId | null>(null);
+  const [briefingStep, setBriefingStep] = useState(0);
   const [activeFocus, setActiveFocus] = useState<FocusId | null>(null);
   const [toolPanel, setToolPanel] = useState<ToolPanel>(null);
   const [dayStartMetrics, setDayStartMetrics] = useState<Metrics>(INITIAL_METRICS);
@@ -421,6 +452,8 @@ export default function Home() {
   const [toast, setToast] = useState("");
   const [soundOn, setSoundOn] = useState(true);
   const [orderDraft, setOrderDraft] = useState<Inventory>({ seed: 0, fertilizer: 0, cropCare: 0, drip: 0 });
+  const [supplierIntroStep, setSupplierIntroStep] = useState(0);
+  const [supplierSeenDays, setSupplierSeenDays] = useState<number[]>([]);
   const [reserveDraft, setReserveDraft] = useState(false);
   const [reserveStatus, setReserveStatus] = useState<"none" | "held" | "delivered" | "released">("none");
   const [stocktakeActive, setStocktakeActive] = useState(false);
@@ -466,6 +499,28 @@ export default function Home() {
     : followupDays > 0
       ? "Farmer calls sharpen the estimate, but rain timing still creates a range."
       : "Based on registrations, recent vuli sales, the waiting queue, and uncertain rain timing.";
+  const morningStory: StoryLine[] = [
+    ...morningNews.map((text) => ({ speaker: "Morning update", icon: "📻", text })),
+    ...day.story,
+  ];
+  const customerLines = selectedCustomer ? splitSentences(selectedCustomer.opening) : [];
+  const supplierIntroLines: StoryLine[] = [
+    {
+      speaker: "Musa",
+      icon: "🧑🏿‍💼",
+      text: `I can deliver today. Transport will cost ${formatCash(transportFee)}${stocktakeActive ? " because you joined the shared route" : ""}.`,
+    },
+    {
+      speaker: "Amina",
+      icon: "👩🏾‍💼",
+      text: "My stock records and farmer information give me a demand range for each product.",
+    },
+    {
+      speaker: "Amina",
+      icon: "👩🏾‍💼",
+      text: "I can keep more cash by covering the lower estimate, or carry a small buffer for a busier week.",
+    },
+  ];
 
   const playTone = useCallback(
     (frequency = 560, duration = 0.07) => {
@@ -506,10 +561,12 @@ export default function Home() {
   const startSeason = () => {
     playTone(640, 0.12);
     setPhase("morning");
+    setBriefingStep(0);
     setMorningNews(["The Centre opens with limited shelf stock and TSh 4.8m in working capital."]);
   };
 
   const beginDay = () => {
+    if (briefingStep < morningStory.length) return;
     if (!morningFocus) return;
     if (dayIndex >= 2 && reserveStatus === "held") return;
     playTone(700, 0.1);
@@ -544,6 +601,7 @@ export default function Home() {
     if (resolvedCustomers.includes(customer.id)) return;
     playTone(760);
     setSelectedCustomer(customer);
+    setCustomerLineIndex(0);
     setPlayer({ x: customer.x, y: Math.min(84, customer.y + 9) });
     setToast("");
     if (customer.kind === "sale") {
@@ -715,7 +773,18 @@ export default function Home() {
   const openSupplier = () => {
     setOrderDraft({ seed: 0, fertilizer: 0, cropCare: 0, drip: 0 });
     setReserveDraft(false);
+    setSupplierIntroStep(supplierSeenDays.includes(dayIndex) ? supplierIntroLines.length : 0);
     setToolPanel("supplier");
+  };
+
+  const advanceSupplierIntro = () => {
+    if (supplierIntroStep >= supplierIntroLines.length - 1) {
+      setSupplierIntroStep(supplierIntroLines.length);
+      setSupplierSeenDays((current) => (current.includes(dayIndex) ? current : [...current, dayIndex]));
+    } else {
+      setSupplierIntroStep((current) => current + 1);
+    }
+    playTone(700, 0.06);
   };
 
   const placeSupplierOrder = () => {
@@ -747,6 +816,8 @@ export default function Home() {
       setMorningNews((current) => [...current, "You release the reservation. The TSh 120,000 deposit is not returned, but no more cash is committed."]);
       playTone(440, 0.1);
     }
+    // Keep the completed briefing complete when the decision adds one new news item.
+    setBriefingStep((current) => current + 1);
   };
 
   const closeShop = () => {
@@ -808,6 +879,7 @@ export default function Home() {
     setResolvedCustomers([]);
     setServedCustomerIds([]);
     setMorningFocus(null);
+    setBriefingStep(0);
     setActiveFocus(null);
     setMorningNews(news);
     setStocktakeActive(false);
@@ -823,7 +895,9 @@ export default function Home() {
     setResolvedCustomers([]);
     setServedCustomerIds([]);
     setSelectedCustomer(null);
+    setCustomerLineIndex(0);
     setMorningFocus(null);
+    setBriefingStep(0);
     setActiveFocus(null);
     setToolPanel(null);
     setLogs([]);
@@ -833,6 +907,8 @@ export default function Home() {
     setPlayer(START_POSITION);
     setToast("");
     setReserveStatus("none");
+    setSupplierIntroStep(0);
+    setSupplierSeenDays([]);
     setStocktakeActive(false);
     setFollowupDays(0);
     setModelFarmDays(0);
@@ -1004,30 +1080,40 @@ export default function Home() {
                   <span className="morning-icon" aria-hidden="true">🌅</span>
                   <div><span className="eyebrow">Morning {dayIndex + 1} of {DAYS.length}</span><h1>{day.title}</h1><p>{day.date} · {day.weather}</p></div>
                 </div>
-                <p className="morning-brief">{day.briefing}</p>
-                {morningNews.length > 0 && (
-                  <div className="morning-news">
-                    <span className="eyebrow">News carried into today</span>
-                    {morningNews.map((item) => <p key={item}>• {item}</p>)}
+                {briefingStep < morningStory.length ? (
+                  <div className="story-stage morning-story">
+                    <div className="story-speaker"><span aria-hidden="true">{morningStory[briefingStep].icon}</span><strong>{morningStory[briefingStep].speaker}</strong></div>
+                    <p>{morningStory[briefingStep].text}</p>
+                    <div className="story-footer">
+                      <div className="story-progress" aria-label={`Briefing line ${briefingStep + 1} of ${morningStory.length}`}>
+                        {morningStory.map((_, index) => <span key={index} className={`story-dot ${index < briefingStep ? "done" : index === briefingStep ? "current" : ""}`} />)}
+                      </div>
+                      <button className="primary-button story-next" type="button" onClick={() => { setBriefingStep((current) => Math.min(morningStory.length, current + 1)); playTone(700, 0.06); }}>
+                        {briefingStep === morningStory.length - 1 ? "I understand — choose a plan" : "Continue →"}
+                      </button>
+                    </div>
                   </div>
-                )}
-                {dayIndex >= 2 && reserveStatus === "held" && (
-                  <div className="reserve-call">
-                    <div><span className="eyebrow">Musa is on the phone</span><strong>Your 12 reserved seed packs are ready.</strong><p>Pay the remaining TSh 540,000 for delivery, or release the option and lose only the deposit.</p></div>
-                    <div><button type="button" disabled={metrics.cash < 540000} onClick={() => handleReserve("deliver")}>Take delivery</button><button type="button" onClick={() => handleReserve("release")}>Release reserve</button></div>
-                  </div>
-                )}
-                <span className="section-label">Choose one morning priority</span>
-                <div className="focus-grid">
-                  {MORNING_FOCUSES.map((focus) => (
-                    <button key={focus.id} type="button" className={morningFocus === focus.id ? "selected" : ""} onClick={() => setMorningFocus(focus.id)}>
-                      <span>{focus.icon}</span><strong>{focus.label}</strong><p>{focus.copy}</p><small>{focus.effect}</small>
+                ) : (
+                  <div className="morning-actions">
+                    {dayIndex >= 2 && reserveStatus === "held" && (
+                      <div className="reserve-call">
+                        <div><span className="eyebrow">Musa is on the phone</span><strong>Your 12 reserved seed packs are ready.</strong><p>Pay the remaining TSh 540,000 for delivery, or release the option and lose only the deposit.</p></div>
+                        <div><button type="button" disabled={metrics.cash < 540000} onClick={() => handleReserve("deliver")}>Take delivery</button><button type="button" onClick={() => handleReserve("release")}>Release reserve</button></div>
+                      </div>
+                    )}
+                    <span className="section-label">Now choose one morning priority</span>
+                    <div className="focus-grid">
+                      {MORNING_FOCUSES.map((focus) => (
+                        <button key={focus.id} type="button" className={morningFocus === focus.id ? "selected" : ""} onClick={() => setMorningFocus(focus.id)}>
+                          <span>{focus.icon}</span><strong>{focus.label}</strong><p>{focus.copy}</p><small>{focus.effect}</small>
+                        </button>
+                      ))}
+                    </div>
+                    <button className="primary-button open-shop-button" type="button" disabled={!morningFocus || (dayIndex >= 2 && reserveStatus === "held")} onClick={beginDay}>
+                      {dayIndex >= 2 && reserveStatus === "held" ? "Answer Musa before opening" : "Open the Centre →"}
                     </button>
-                  ))}
-                </div>
-                <button className="primary-button open-shop-button" type="button" disabled={!morningFocus || (dayIndex >= 2 && reserveStatus === "held")} onClick={beginDay}>
-                  {dayIndex >= 2 && reserveStatus === "held" ? "Answer Musa before opening" : "Open the Centre →"}
-                </button>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -1051,8 +1137,23 @@ export default function Home() {
             <div className="interaction-scrim">
               <div className="interaction-sheet pixel-panel" role="dialog" aria-modal="true" aria-label={`Conversation with ${selectedCustomer.name}`}>
                 <button className="sheet-close" type="button" aria-label="Return to the shop" onClick={() => setSelectedCustomer(null)}>×</button>
-                <div className="conversation-heading"><span>{selectedCustomer.icon}</span><div><span className="eyebrow">At the counter</span><h2>{selectedCustomer.name}</h2><p>“{selectedCustomer.opening}”</p></div></div>
+                <div className="conversation-heading"><span>{selectedCustomer.icon}</span><div><span className="eyebrow">At the counter</span><h2>{selectedCustomer.name}</h2><p>{customerLineIndex < customerLines.length ? "Listen to the request before deciding what to do." : "Now choose how Amina will respond."}</p></div></div>
 
+                {customerLineIndex < customerLines.length ? (
+                  <div className="story-stage customer-story">
+                    <div className="story-speaker"><span aria-hidden="true">{selectedCustomer.icon}</span><strong>{selectedCustomer.name}</strong></div>
+                    <p>“{customerLines[customerLineIndex]}”</p>
+                    <div className="story-footer">
+                      <div className="story-progress" aria-label={`Request line ${customerLineIndex + 1} of ${customerLines.length}`}>
+                        {customerLines.map((_, index) => <span key={index} className={`story-dot ${index < customerLineIndex ? "done" : index === customerLineIndex ? "current" : ""}`} />)}
+                      </div>
+                      <button className="primary-button story-next" type="button" onClick={() => { setCustomerLineIndex((current) => Math.min(customerLines.length, current + 1)); playTone(700, 0.06); }}>
+                        {customerLineIndex === customerLines.length - 1 ? "Respond to the request →" : "Continue →"}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
                 {selectedCustomer.kind === "sale" && (
                   <div className="sale-builder">
                     <div className="stock-snapshot"><span>{PRODUCTS[selectedCustomer.product].icon}</span><div><small>On your shelf</small><strong>{inventory[selectedCustomer.product]} {PRODUCTS[selectedCustomer.product].shortLabel.toLowerCase()} units</strong></div><div><small>Requested</small><strong>{selectedCustomer.requested}</strong></div></div>
@@ -1089,6 +1190,8 @@ export default function Home() {
                     <p className="uncertainty-note">Juma&apos;s crop—and the effect on your reputation—will be visible at demo day.</p>
                   </div>
                 )}
+                  </>
+                )}
               </div>
             </div>
           )}
@@ -1101,6 +1204,24 @@ export default function Home() {
                 {toolPanel === "inventory" && <><span className="eyebrow">Live stockroom</span><h2>What is actually on the shelf?</h2><div className="inventory-grid">{(Object.keys(PRODUCTS) as ProductKey[]).map((key) => <div key={key}><span>{PRODUCTS[key].icon}</span><strong>{inventory[key]}</strong><small>{PRODUCTS[key].label}</small><em>Buy {formatCash(PRODUCTS[key].cost)} · Sell {formatCash(PRODUCTS[key].price)}</em></div>)}</div><button className="primary-button" type="button" onClick={openSupplier}>Call Musa to order stock</button></>}
 
                 {toolPanel === "supplier" && (
+                  supplierIntroStep < supplierIntroLines.length ? (
+                    <>
+                      <span className="eyebrow">Call with Musa · Arusha distributor</span>
+                      <h2>Listen before opening the order book</h2>
+                      <div className="story-stage supplier-story">
+                        <div className="story-speaker"><span aria-hidden="true">{supplierIntroLines[supplierIntroStep].icon}</span><strong>{supplierIntroLines[supplierIntroStep].speaker}</strong></div>
+                        <p>{supplierIntroLines[supplierIntroStep].text}</p>
+                        <div className="story-footer">
+                          <div className="story-progress" aria-label={`Supplier call line ${supplierIntroStep + 1} of ${supplierIntroLines.length}`}>
+                            {supplierIntroLines.map((_, index) => <span key={index} className={`story-dot ${index < supplierIntroStep ? "done" : index === supplierIntroStep ? "current" : ""}`} />)}
+                          </div>
+                          <button className="primary-button story-next" type="button" onClick={advanceSupplierIntro}>
+                            {supplierIntroStep === supplierIntroLines.length - 1 ? "Open the order book →" : "Continue →"}
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
                   <>
                     <span className="eyebrow">Musa · distributor in Arusha</span>
                     <h2>Plan today&apos;s stock order</h2>
@@ -1198,6 +1319,7 @@ export default function Home() {
                       {orderTotal > metrics.cash ? "This order costs more cash than you have" : "Place order and pay"}
                     </button>
                   </>
+                  )
                 )}
 
                 {toolPanel === "ledger" && <><span className="eyebrow">Business ledger</span><h2>Promises still moving through the week</h2>{pendingOutcomes.length === 0 ? <p className="empty-state">No unsettled customer promises yet.</p> : <div className="pending-list">{pendingOutcomes.map((outcome) => <div key={outcome.id}><span>Due Day {outcome.dueDay + 1}</span><strong>{outcome.title}</strong><p>The final amount or relationship effect is still uncertain.</p></div>)}</div>}<span className="section-label">Completed days</span><div className="compact-log">{logs.length === 0 ? <p>No day has closed yet.</p> : logs.map((log) => <div key={log.day}><strong>{log.day}</strong><span>{log.served} served · {log.missed} missed</span><span>{formatDelta(log.cashDelta, true)} cash · {formatDelta(log.trustDelta)} trust</span></div>)}</div></>}

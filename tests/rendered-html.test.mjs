@@ -35,12 +35,24 @@ test("lets the player operate the Centre and make trade-offs", async () => {
   assert.match(page, /Close shop for the day/);
 });
 
+test("reveals context before showing beginner decisions", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+
+  assert.match(page, /briefingStep < morningStory.length/);
+  assert.match(page, /I understand — choose a plan/);
+  assert.match(page, /Listen to the request before deciding what to do/);
+  assert.match(page, /customerLineIndex < customerLines.length/);
+  assert.match(page, /Respond to the request/);
+  assert.match(page, /supplierIntroStep < supplierIntroLines.length/);
+  assert.match(page, /Open the order book/);
+});
+
 test("carries delayed consequences into later days and supports replay", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
 
   assert.match(page, /PendingOutcome/);
   assert.match(page, /dueDay: 4/);
-  assert.match(page, /News carried into today/);
+  assert.match(page, /Morning update/);
   assert.match(page, /You will not know the repayment result until later in the week/);
   assert.match(page, /What changed today\?/);
   assert.match(page, /Play a different vuli week/);

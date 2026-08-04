@@ -40,11 +40,11 @@ The game persists four interacting systems across five days:
 ## Game loop
 
 ```text
-Morning conditions
+Short morning scene (one line at a time)
       ↓
 Choose one operational priority
       ↓
-Open shop: customers + inventory + supplier + ledger
+Open shop: hear a request, then use the relevant controls
       ↓
 Player decides when the day is over
       ↓
@@ -61,6 +61,7 @@ There is no mandatory evidence count, multiple-choice “correct answer,” or f
 - Amina's notebook unlocks short principles when the player uses the relevant system.
 - Day-end recaps show state changes in the business rather than grading the player.
 - Replay rotates among late, early, and uneven rain scenarios so the same stock choice can produce a different result.
+- Context arrives before controls: morning choices, customer actions, and the supplier order book stay hidden until the player has clicked through the short scene.
 
 ## ALP material used to shape the scenarios
 
