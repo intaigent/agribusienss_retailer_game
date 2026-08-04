@@ -41,7 +41,7 @@ test("shows immediate trade-offs after every decision", async () => {
   assert.match(page, /Decision made · what changed/);
   assert.match(page, /The shelf changes immediately/);
   assert.match(page, /The package affects stock and the ledger/);
-  assert.match(page, /Cash and time move now; trust returns later/);
+  assert.match(page, /The safer work has a deadline cost/);
   assert.match(page, /Continue the story/);
   assert.match(page, /Time after sale/);
   assert.match(page, /Credit still owed/);
@@ -53,9 +53,40 @@ test("keeps representative BLF learning inside the story", async () => {
   assert.match(page, /Check repayment record/);
   assert.match(page, /Confirm the buyer/);
   assert.match(page, /Verify before recommending/);
-  assert.match(page, /Optional ALP Coach/);
+  assert.match(page, /ALP Coach · before you decide/);
+  assert.match(page, /What you know/);
+  assert.match(page, /What to consider/);
+  assert.match(page, /What to record/);
+  assert.match(page, /BLF · Inventory Recordkeeping \+ Cash Ledger/);
   assert.match(page, /Ideas discovered through play/);
-  assert.match(page, /The community remembers the whole day/);
+  assert.match(page, /A balanced result rewards farmer value/);
+});
+
+test("connects each consequence to active bookkeeping practice", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+
+  assert.match(page, /Close the loop before continuing/);
+  assert.match(page, /Where should Amina record this source document/);
+  assert.match(page, /Cash ledger/);
+  assert.match(page, /Inventory card/);
+  assert.match(page, /Customer credit ledger/);
+  assert.match(page, /Expense ledger/);
+  assert.match(page, /Follow-up log/);
+  assert.match(page, /Do the books agree with the Centre/);
+  assert.match(page, /Closing reconciliation complete/);
+});
+
+test("makes the demonstration deadline and final score consequential", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+
+  assert.match(page, /DEMO_DEADLINE = 900/);
+  assert.match(page, /Every check advances the clock immediately/);
+  assert.match(page, /inspectAdvice\("consultant", 20\)/);
+  assert.match(page, /The model-farm demonstration started/);
+  assert.match(page, /Balanced Centre Score breakdown/);
+  assert.match(page, /Farmer value/);
+  assert.match(page, /Bookkeeping/);
+  assert.match(page, /Share my result/);
 });
 
 test("is a standard Next.js project ready for Vercel", async () => {

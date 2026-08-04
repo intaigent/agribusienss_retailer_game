@@ -9,9 +9,9 @@ The prototype follows one connected vuli market day rather than several thin cou
 1. A short sentence-by-sentence briefing establishes Amina's fixed stock and known commitments.
 2. Rashidi offers cash for five of the eight seed packs. The interface shows how many would remain for Mama Rehema.
 3. Rehema asks for credit. The player may check her record and buyer, then choose one of three understandable packages.
-4. Juma asks for advice about an uncertain crop problem. Amina may investigate, make a quick sale, or create a referral.
-5. Neema brings the final demonstration-group request, revealing how earlier stock decisions affect the afternoon.
-6. The community returns at closing so consequences become part of one coherent story.
+4. Juma arrives at 2:00 PM with an uncertain crop problem. Evidence checks advance the clock toward a real 3:00 PM demonstration deadline.
+5. Neema brings the final demonstration-group request, reflecting both earlier stock allocation and whether Amina arrived on time.
+6. The community returns at closing, the books reconcile, and a transparent Balanced Centre Score explains the result.
 
 Stock ordering and demand forecasting are intentionally outside this beginner prototype. There is no arbitrary quantity to order: the player allocates a known shelf across known people. Inventory still matters, but as a visible constraint rather than a forecasting calculation.
 
@@ -20,9 +20,24 @@ Stock ordering and demand forecasting are intentionally outside this beginner pr
 - Context appears one short line at a time.
 - Decision controls unlock only after the player hears the request.
 - Only the current encounter is revealed; later characters enter through the story.
+- After every request, the ALP Coach presents three curriculum-grounded prompts: what is known, what to consider, and what must be recorded.
 - A “what changed?” screen follows every decision and shows before-and-after cash, stock, time, trust, or credit.
-- The ALP Coach remains optional and offers a question rather than a correct answer.
+- Each consequence creates source documents that the player classifies into the cash ledger, inventory card, customer credit ledger, expense ledger, or follow-up log.
+- Incorrect bookkeeping choices receive an instructional Coach explanation and can be corrected without blocking the learner.
+- The 3:00 PM deadline changes the following scene and the closing outcome; elapsed time comes from in-game actions rather than reading speed.
 - Characters return at closing, connecting earlier choices to later consequences.
+
+## Balanced Centre Score
+
+The shareable closing result totals 100 points without treating cash as the sole definition of success:
+
+- Farmer value and trust: 20
+- Bookkeeping accuracy: 25
+- Stock and cash stewardship: 20
+- Credit and product-risk management: 20
+- Time and demonstration readiness: 15
+
+Bookkeeping awards first-attempt accuracy as well as complete reconciliation. Multiple responsible routes can score well because safety, service, time, and business sustainability sometimes pull in different directions.
 
 ## ALP curriculum alignment
 
@@ -32,6 +47,7 @@ The beginner scenario concentrates on representative retailer topics that can be
 - Finance and Accounting: Credit for Customers
 - Growing Your Business: Managing Risk
 - Bookkeeping Essentials: Inventory Ledger
+- Bookkeeping Essentials: Cash Ledger and Expense Ledger
 - Fundamentals of Retail Management: Inventory and Business Cycles
 - Growing Your Business: Business Relationships
 

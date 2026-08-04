@@ -15,14 +15,14 @@ Rashidi: cash sale versus seed needed by Rehema later
        ↓
 Mama Rehema: package size, checks, deposit, and credit balance
        ↓
-Juma: quick sale versus time spent verifying or referring
+2:00 PM · Juma: evidence checks visibly consume the hour before the demo
        ↓
-Neema: the final group request reveals the stock consequence
+3:00 PM · Neema: the final request reveals stock and deadline consequences
        ↓
-Closing: every character returns and the combined outcome is shown
+Closing: books reconcile and the Balanced Centre Score is shared
 ```
 
-Only the current encounter is visible. A character explains the situation sentence by sentence, then the relevant controls appear. After the choice, a dedicated impact screen shows exactly what changed before the next character enters.
+Only the current encounter is visible. A character explains the situation sentence by sentence. The ALP Coach then connects the live facts to three short curriculum prompts before the controls unlock. After the choice, a dedicated impact screen shows exactly what changed, and the player classifies the resulting source documents before the next character enters.
 
 ## Resources and trade-offs
 
@@ -31,7 +31,7 @@ Only the current encounter is visible. A character explains the situation senten
 | Shelf stock | Exact units before and after a choice | A product given now cannot serve the next farmer |
 | Cash | Amount received or spent immediately | Cash sales help the Centre, while some support costs money |
 | Credit exposure | Balance still owed in the ledger | Products leave now even when payment returns later |
-| Time | Clock before and after each interaction | Checking information can improve a decision but uses the market day |
+| Time | A live deadline, action costs, and early/late result | Checking information can improve a decision but may delay the 3:00 PM demonstration |
 | Trust | Immediate service effects and closing consequences | Customer care and responsible advice influence relationships |
 
 The interface previews the direct trade-off before confirmation and then repeats it as a before-and-after change. Consequences that genuinely remain uncertain—such as Juma's reputation effect—are marked as returning at the demonstration instead of being presented as certain.
@@ -44,18 +44,20 @@ The local agribusiness-retailer learning path and beginner messages shaped these
 | --- | --- | --- |
 | Customer Care | Listen with empathy, understand the need, provide a solution, and build repeat relationships | Requests unfold before controls; full, partial, or unavailable service changes the relationship |
 | Credit for Customers | Assess creditworthiness, set limits and terms, use written agreements, monitor borrowers, and keep a ledger | Rehema's repayment history and buyer can be checked; package size controls the balance still owed |
-| Inventory Ledger / Business Cycles | Know what is on hand and connect inventory to cash movement | Every package visibly leaves the fixed shelf; sales add cash while credit enters the ledger |
+| Cash, Expense, and Inventory Ledgers | Record cash in/out and reconcile inventory movements with source documents | Each decision generates receipts, stock releases, expenses, credit agreements, or follow-up notes for the player to classify |
 | Managing Risk | Identify uncertainty and reduce avoidable exposure | The player can limit a package or avoid recommending an unverified product |
 | Business Relationships | Trust, follow-up, and referrals affect future business | A warm agronomist referral and closing community reactions reveal relationship effects |
 
 Supplier Relationships and demand forecasting remain valuable advanced topics, but they are not included in this beginner scenario.
 
-## Learning layer
+## Learning and scoring layer
 
-- The optional ALP Coach gives a nudge rather than revealing an answer.
-- Amina's notebook unlocks short principles through play.
-- No choice is labelled correct or wrong.
-- Closing feedback is told through returning characters, not a quiz score.
+- The ALP Coach appears at every decision with “what you know,” “what to consider,” and “what to record,” using the current stock, balance, evidence, and time.
+- Bookkeeping is a source-document matching activity; amounts are pre-calculated so beginners practise classification and reconciliation rather than arithmetic.
+- A wrong ledger match produces a curriculum explanation and another attempt. First-attempt accuracy affects the score, but mistakes never block learning.
+- The 100-point Balanced Centre Score is transparent: farmer value 20, bookkeeping 25, stewardship 20, risk 20, and time 15.
+- Cash, unused stock, or speed alone cannot produce a winning result.
+- Closing feedback combines category scores, badges, returning-character consequences, and a shareable text result.
 - Replay keeps the same understandable situation so learners can deliberately test a different allocation.
 
 ## Content boundary
