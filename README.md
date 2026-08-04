@@ -2,52 +2,44 @@
 
 Kijani Centre is a small browser-based agribusiness life simulation. The player is Amina, a fictional Better Life Farming agri-entrepreneur and Agribusiness Leadership Program (ALP) trainee in Tanzania's Lake Zone.
 
-This is designed as a game, not a sequence of lessons. Across five shop days, the player decides how to spend the morning, orders stock with limited working capital, serves farmers from real inventory, structures customer credit, responds to an uncertain crop problem, and closes the shop when they choose. Decisions can create consequences several days later.
+The prototype follows one connected vuli market day rather than several thin course-like episodes. Four characters arrive in sequence, and every choice changes the stock, cash, time, credit exposure, or trust available in the next encounter.
 
-## Core game loop
+## The market-day story
 
-1. Click through a short, sentence-by-sentence morning scene, then choose one operational priority.
-2. Open the Centre and decide which people and business systems need attention.
-3. Compare stock with a beginner-friendly demand range, then sell, negotiate, order, or close early.
-4. Review the day's cash, trust, and readiness changes.
-5. Carry stock, capital, promises, and delayed outcomes into the next day.
-6. Replay with a different rain-and-demand scenario.
+1. A short sentence-by-sentence briefing establishes Amina's fixed stock and known commitments.
+2. Rashidi offers cash for five of the eight seed packs. The interface shows how many would remain for Mama Rehema.
+3. Rehema asks for credit. The player may check her record and buyer, then choose one of three understandable packages.
+4. Juma asks for advice about an uncertain crop problem. Amina may investigate, make a quick sale, or create a referral.
+5. Neema brings the final demonstration-group request, revealing how earlier stock decisions affect the afternoon.
+6. The community returns at closing so consequences become part of one coherent story.
 
-The ALP Coach is optional. Learning ideas unlock in Amina's notebook through play instead of interrupting the game with mandatory explanations or quiz feedback.
+Stock ordering and demand forecasting are intentionally outside this beginner prototype. There is no arbitrary quantity to order: the player allocates a known shelf across known people. Inventory still matters, but as a visible constraint rather than a forecasting calculation.
 
-Morning briefings, customer requests, and the first supplier call use progressive disclosure: one short line appears at a time, and decision controls unlock only after the situation is clear. Returning to a supplier call on the same day skips the repeated introduction.
+## Interaction principles
 
-The stock-order screen follows the ALP Inventory Management Methods material: it uses past sales, demand patterns, seasonality, a possible buffer stock, and regular stock checks. Players see a lower and upper demand estimate, can preserve more cash by covering the lower estimate or add a small safety buffer, and can still adjust every quantity themselves.
-
-## Scenario foundation
-
-The setting is fictional but grounded in the documented Better Life Farming operating model in Tanzania:
-
-- BLF Centres are locally owned rural businesses that provide inputs, agronomic advice, training, model farms, financing linkages, and market connections.
-- Tanzania's BLF network includes Centres run by trained agri-entrepreneurs who serve smallholder farmers with seeds, fertilizer, pesticides, and practical advice.
-- Documented retailer challenges include limited working capital, costly input transport from Arusha, bookkeeping, inventory supply, customer care, and supplier relationships.
-- Agri-entrepreneurs use model farms and demo days as community learning hubs and can consult a bilingual Better Life Farming chatbot as an on-demand coach.
-
-Primary references:
-
-- [IFC: Inspiring a New Generation of Farming Entrepreneurs](https://www.ifc.org/en/stories/2025/inspiring-a-new-generation-of-farming-entrepreneurs)
-- [IFC: Turning Tanzania's Farmers into Agri-Entrepreneurs](https://www.ifc.org/en/stories/2025/empowering-tanzania-s-farmers-one-entrepreneur-at-a-time)
-- [Bayer: Better Life Farming and sustainable food systems](https://www.bayer.com/en/agriculture/zero-hunger-pledge)
-
-The player, Centre, customer requests, prices, and outcomes are fictional. They do not depict the choices of any named real participant and are not agronomic or financial advice.
+- Context appears one short line at a time.
+- Decision controls unlock only after the player hears the request.
+- Only the current encounter is revealed; later characters enter through the story.
+- A “what changed?” screen follows every decision and shows before-and-after cash, stock, time, trust, or credit.
+- The ALP Coach remains optional and offers a question rather than a correct answer.
+- Characters return at closing, connecting earlier choices to later consequences.
 
 ## ALP curriculum alignment
 
-The simulation draws on these retailer topics without turning them into separate course screens:
+The beginner scenario concentrates on representative retailer topics that can be practised without specialist forecasting knowledge:
 
-- Bookkeeping Essentials: Inventory Ledger
-- Fundamentals of Retail Management: Inventory Management Methods
-- Fundamentals of Retail Management: Inventory and Business Cycles
-- Fundamentals of Retail Management: Supplier Relationships
 - Fundamentals of Retail Management: Customer Care
 - Finance and Accounting: Credit for Customers
 - Growing Your Business: Managing Risk
+- Bookkeeping Essentials: Inventory Ledger
+- Fundamentals of Retail Management: Inventory and Business Cycles
 - Growing Your Business: Business Relationships
+
+The mechanics draw on the local ALP curriculum materials: listening and finding a customer solution, checking creditworthiness, setting limits and terms, recording balances, monitoring stock, protecting trust, and referring uncertain agronomic problems responsibly.
+
+## Scenario boundary
+
+The player, Centre, requests, prices, and outcomes are fictional. They do not depict the choices of a named participant and are not agronomic or financial advice. Product safety, crop diagnosis, credit terms, and local prices require review by Tanzania-based subject-matter experts before learner deployment.
 
 ## Play locally
 
@@ -58,7 +50,7 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:3000`. Use the waiting-visitor card or the character markers to talk to farmers. The stockroom, ledger, notebook, supplier, and ALP Coach are available as optional tools.
+Open `http://localhost:3000`.
 
 ## Verify and build
 
@@ -68,8 +60,8 @@ npm run lint
 npm run build
 ```
 
-The app is a standard Next.js project configured for zero-configuration deployment on Vercel.
+The app is a standard Next.js project configured for Vercel deployment.
 
 ## Asset note
 
-The game-map artwork is an original AI-generated pixel-art environment created for this prototype. It contains no third-party game assets, characters, logos, or trademarks.
+The game-map artwork is an original AI-generated pixel-art environment. It contains no third-party game assets, characters, logos, or trademarks.

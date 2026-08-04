@@ -1,16 +1,17 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 type Metrics = { cash: number; readiness: number; trust: number };
 type ProductKey = "seed" | "fertilizer" | "cropCare" | "drip";
 type Inventory = Record<ProductKey, number>;
-type DemandRange = { min: number; max: number };
-type DemandForecast = Record<ProductKey, DemandRange>;
 type Position = { x: number; y: number };
-type Phase = "title" | "morning" | "shop" | "evening" | "end";
-type FocusId = "stocktake" | "followup" | "modelFarm";
-type ToolPanel = "inventory" | "ledger" | "coach" | "notebook" | "supplier" | null;
+type Phase = "title" | "briefing" | "shop" | "ending";
+type ToolPanel = "inventory" | "ledger" | "coach" | "notebook" | null;
+type CreditOptionId = "starter" | "staged" | "large";
+type AdviceId = "verify" | "sell" | "refer";
+
+type StoryLine = { speaker: string; icon: string; text: string };
 
 type SaleCustomer = Position & {
   id: string;
@@ -20,6 +21,8 @@ type SaleCustomer = Position & {
   product: ProductKey;
   requested: number;
   opening: string;
+  context: string;
+  next: string;
 };
 
 type CreditCustomer = Position & {
@@ -28,6 +31,7 @@ type CreditCustomer = Position & {
   name: string;
   icon: string;
   opening: string;
+  next: string;
 };
 
 type AdviceCustomer = Position & {
@@ -36,247 +40,180 @@ type AdviceCustomer = Position & {
   name: string;
   icon: string;
   opening: string;
+  next: string;
 };
 
 type Customer = SaleCustomer | CreditCustomer | AdviceCustomer;
-type StoryLine = { speaker: string; icon: string; text: string };
 
-type PendingOutcome = {
-  id: string;
-  dueDay: number;
+type Impact = {
   title: string;
-  copy: string;
-  effects: Partial<Metrics>;
+  summary: string;
+  next: string;
+  final: boolean;
+  changes: Array<{
+    icon: string;
+    label: string;
+    before: string;
+    after: string;
+    tone?: "positive" | "negative" | "neutral";
+  }>;
 };
 
-type DayLog = {
-  day: string;
-  focus: string;
-  served: number;
-  missed: number;
-  cashDelta: number;
-  trustDelta: number;
-  readinessDelta: number;
-  notes: string[];
+type StoryFlags = {
+  rashidiQuantity: number | null;
+  creditOption: CreditOptionId | null;
+  creditStructured: boolean;
+  adviceChoice: AdviceId | null;
+  adviceEvidence: number;
+  neemaQuantity: number | null;
 };
 
-type CreditPackageId = "starter" | "contracted" | "full";
-type AdviceId = "verify" | "sell" | "refer";
-
-const INITIAL_METRICS: Metrics = { cash: 4800000, readiness: 48, trust: 68 };
-const INITIAL_INVENTORY: Inventory = { seed: 12, fertilizer: 8, cropCare: 4, drip: 2 };
+const INITIAL_METRICS: Metrics = { cash: 2400000, readiness: 52, trust: 68 };
+const INITIAL_INVENTORY: Inventory = { seed: 8, fertilizer: 4, cropCare: 2, drip: 1 };
 const START_POSITION: Position = { x: 51, y: 77 };
-const PRODUCT_KEYS: ProductKey[] = ["seed", "fertilizer", "cropCare", "drip"];
-
-const PRODUCTS: Record<
-  ProductKey,
-  { label: string; shortLabel: string; icon: string; cost: number; price: number }
-> = {
-  seed: { label: "Vegetable seed packs", shortLabel: "Seed", icon: "🌱", cost: 60000, price: 95000 },
-  fertilizer: { label: "Fertilizer bags", shortLabel: "Fertilizer", icon: "🧺", cost: 95000, price: 140000 },
-  cropCare: { label: "Registered crop-care units", shortLabel: "Crop care", icon: "🧪", cost: 50000, price: 80000 },
-  drip: { label: "Drip-line kits", shortLabel: "Drip kits", icon: "💧", cost: 75000, price: 120000 },
+const INITIAL_FLAGS: StoryFlags = {
+  rashidiQuantity: null,
+  creditOption: null,
+  creditStructured: false,
+  adviceChoice: null,
+  adviceEvidence: 0,
+  neemaQuantity: null,
 };
 
-const DAYS = [
+const PRODUCTS: Record<ProductKey, { label: string; shortLabel: string; icon: string; price: number }> = {
+  seed: { label: "Vegetable seed packs", shortLabel: "Seed", icon: "🌱", price: 95000 },
+  fertilizer: { label: "Fertilizer bags", shortLabel: "Fertilizer", icon: "🧺", price: 140000 },
+  cropCare: { label: "Registered crop-care units", shortLabel: "Crop care", icon: "🧪", price: 160000 },
+  drip: { label: "Drip-line kits", shortLabel: "Drip kits", icon: "💧", price: 120000 },
+};
+
+const BRIEFING: StoryLine[] = [
   {
-    date: "Mon · 2 Oct",
-    time: "7:05 AM",
-    weather: "☀️ 24°",
-    title: "Opening week",
-    briefing: "Registered farmers are preparing for vuli. Rain timing is uncertain and Arusha transport is costly.",
-    story: [
-      { speaker: "Amina", icon: "👩🏾‍💼", text: "Vuli planting is approaching, and registered farmers are beginning to buy inputs." },
-      { speaker: "Neema", icon: "👩🏾", text: "Seed and fertilizer requests are already reaching the Centre." },
-      { speaker: "Amina", icon: "👩🏾‍💼", text: "Rain timing is uncertain, and each Arusha delivery uses business cash." },
-    ] satisfies StoryLine[],
+    speaker: "Amina",
+    icon: "👩🏾‍💼",
+    text: "Today is the Centre's vuli market day and the model-farm gathering begins at three o'clock.",
   },
   {
-    date: "Wed · 4 Oct",
-    time: "7:20 AM",
-    weather: "⛅ 26°",
-    title: "Credit and cash flow",
-    briefing: "A loyal farmer needs a larger input package, while ordinary shop sales continue.",
-    story: [
-      { speaker: "Amina", icon: "👩🏾‍💼", text: "The first sales changed both my cash and the stock on my shelves." },
-      { speaker: "Mama Rehema", icon: "👩🏿‍🌾", text: "I can pay part today, but I need the rest of my inputs on credit." },
-      { speaker: "Amina", icon: "👩🏾‍💼", text: "I need to serve her without creating a balance the Centre cannot carry." },
-    ] satisfies StoryLine[],
+    speaker: "Amina",
+    icon: "👩🏾‍💼",
+    text: "I counted eight seed packs and four fertilizer bags. No new delivery will arrive today.",
   },
   {
-    date: "Mon · 9 Oct",
-    time: "6:55 AM",
-    weather: "🌦️ 23°",
-    title: "The rain signal",
-    briefing: "Farmers react to the latest forecast. Seed demand may surge—or remain cautious.",
-    story: [
-      { speaker: "Radio report", icon: "📻", text: "The latest rain report has arrived." },
-      { speaker: "Amina", icon: "👩🏾‍💼", text: "Farmer demand will react to this signal." },
-      { speaker: "Musa", icon: "🧑🏿‍💼", text: "If you reserved seed, today is the day to take it or release it." },
-    ] satisfies StoryLine[],
+    speaker: "Neema",
+    icon: "👩🏾",
+    text: "Rashidi is bringing cash for five seed packs, and Mama Rehema asked whether credit might be possible.",
   },
   {
-    date: "Fri · 13 Oct",
-    time: "8:10 AM",
-    weather: "🌧️ 22°",
-    title: "Advice under pressure",
-    briefing: "A crop problem arrives before the model-farm demonstration. A quick sale could be tempting.",
-    story: [
-      { speaker: "Juma", icon: "🧑🏾‍🌾", text: "Spots appeared on my tomato leaves after the rain." },
-      { speaker: "Amina", icon: "👩🏾‍💼", text: "A fast sale could earn cash, but poor advice can harm a farmer and the Centre's trust." },
-      { speaker: "Amina", icon: "👩🏾‍💼", text: "I should separate what I see from what I know." },
-    ] satisfies StoryLine[],
-  },
-  {
-    date: "Sat · 14 Oct",
-    time: "7:30 AM",
-    weather: "🌤️ 25°",
-    title: "Demo and market day",
-    briefing: "Promises, credit, and agronomic advice return as community word-of-mouth reaches the Centre.",
-    story: [
-      { speaker: "Amina", icon: "👩🏾‍💼", text: "Demo day brings farmers back to the Centre." },
-      { speaker: "Neema", icon: "👩🏾", text: "People are talking about which promises were kept and which advice worked." },
-      { speaker: "Amina", icon: "👩🏾‍💼", text: "Today's demand arrives together with the results of earlier decisions." },
-    ] satisfies StoryLine[],
+    speaker: "Amina",
+    icon: "👩🏾‍💼",
+    text: "Every item I give to one farmer will be unavailable to the next, and every conversation uses time.",
   },
 ];
 
-const SEASONS = [
+const CUSTOMERS: Customer[] = [
   {
-    name: "Late rain",
-    demandBoost: 2,
-    reveal: "Useful rain is now expected 10–16 days late. Farmers buy carefully, but demand has not disappeared.",
+    id: "rashidi-sale",
+    kind: "sale",
+    name: "Rashidi",
+    icon: "🧑🏾‍🌾",
+    product: "seed",
+    requested: 5,
+    opening: "Good morning, Amina. I brought cash for five tomato seed packs. We want to plant before the next rain.",
+    context: "Mama Rehema is expected later and may need four seed packs as part of her package.",
+    next: "As Rashidi leaves, Mama Rehema arrives with her farm records.",
+    x: 36,
+    y: 53,
   },
   {
-    name: "Early showers",
-    demandBoost: 7,
-    reveal: "Two early showers bring planting forward. Farmers arrive quickly and seed demand jumps.",
+    id: "rehema-credit",
+    kind: "credit",
+    name: "Mama Rehema",
+    icon: "👩🏿‍🌾",
+    opening: "I can pay TSh 220,000 today. My vegetable buyer pays next month. Can we agree on a package that my farm and your Centre can both manage?",
+    next: "The morning continues. At 1:30 PM, Juma hurries in carrying a spotted tomato leaf.",
+    x: 64,
+    y: 51,
   },
   {
-    name: "Uneven rain",
-    demandBoost: 4,
-    reveal: "Rain begins unevenly across nearby villages. Demand is strong in some routes and cautious in others.",
+    id: "juma-advice",
+    kind: "advice",
+    name: "Juma",
+    icon: "🧑🏾‍🌾",
+    opening: "These spots appeared after the rain. A travelling seller says his cheap pesticide fixes everything. I need your advice before I spend my money.",
+    next: "At 3:00 PM, the model-farm demonstration begins and Neema approaches with the final group request.",
+    x: 37,
+    y: 50,
+  },
+  {
+    id: "neema-finale",
+    kind: "sale",
+    name: "Neema",
+    icon: "👩🏾",
+    product: "seed",
+    requested: 2,
+    opening: "Two farmers at the demonstration want to try the tomato variety they saw. Do we still have two seed packs for them?",
+    context: "This is the final planned seed request of the day.",
+    next: "The doors close and the community reflects on how Amina handled the day.",
+    x: 66,
+    y: 52,
   },
 ];
 
-const MORNING_FOCUSES: Array<{
-  id: FocusId;
-  icon: string;
+const CREDIT_OPTIONS: Array<{
+  id: CreditOptionId;
   label: string;
-  copy: string;
-  effect: string;
-}> = [
-  {
-    id: "stocktake",
-    icon: "📦",
-    label: "Count stock before Musa's truck",
-    copy: "Check every shelf and join today's shared delivery route.",
-    effect: "Clear stock numbers, lower transport cost; +3 readiness.",
-  },
-  {
-    id: "followup",
-    icon: "🤝",
-    label: "Call farmer clients",
-    copy: "Follow up on plans, buyers, and expected payments.",
-    effect: "+3 trust; stronger information for customer credit.",
-  },
-  {
-    id: "modelFarm",
-    icon: "🌿",
-    label: "Prepare the model farm",
-    copy: "Spend the morning checking the demonstration plot.",
-    effect: "+5 readiness; stronger evidence for crop advice.",
-  },
-];
-
-const CREDIT_PACKAGES: Array<{
-  id: CreditPackageId;
-  label: string;
+  explanation: string;
   value: number;
   seed: number;
   fertilizer: number;
   drip: number;
 }> = [
-  { id: "starter", label: "Starter package", value: 220000, seed: 2, fertilizer: 1, drip: 0 },
-  { id: "contracted", label: "Contracted-area package", value: 540000, seed: 4, fertilizer: 3, drip: 1 },
-  { id: "full", label: "Full-hectare package", value: 860000, seed: 6, fertilizer: 5, drip: 2 },
+  {
+    id: "starter",
+    label: "Starter package",
+    explanation: "Covered by today's payment; no balance remains.",
+    value: 220000,
+    seed: 2,
+    fertilizer: 1,
+    drip: 0,
+  },
+  {
+    id: "staged",
+    label: "Staged package",
+    explanation: "Useful now, with a smaller written balance for later.",
+    value: 480000,
+    seed: 3,
+    fertilizer: 2,
+    drip: 0,
+  },
+  {
+    id: "large",
+    label: "Large package",
+    explanation: "More inputs now, but the Centre carries more risk.",
+    value: 700000,
+    seed: 4,
+    fertilizer: 3,
+    drip: 1,
+  },
 ];
 
-const NOTES: Record<string, { title: string; copy: string }> = {
+const NOTEBOOK: Record<string, { title: string; copy: string }> = {
   starting: {
-    title: "Stock uses business cash",
-    copy: "Stock can serve future customers, but money used for stock cannot pay another bill today.",
-  },
-  supplier: {
-    title: "Use records to decide how much to order",
-    copy: "Compare stock on the shelf with recent sales, seasonal demand, and a small buffer. More stock may prevent shortages, but it also uses cash.",
+    title: "One shelf serves many farmers",
+    copy: "A sale can bring cash now while reducing what remains for the next customer. Known commitments make that trade-off easier to judge.",
   },
   credit: {
-    title: "Customer credit needs a living ledger",
-    copy: "Package size, deposits, verified cash flow, payment dates, and follow-up all shape exposure.",
+    title: "Good credit has boundaries",
+    copy: "Past repayment, buyer information, package size, a written balance, and clear dates help both the farmer and the Centre.",
   },
   advice: {
-    title: "A trusted retailer sometimes delays a sale",
-    copy: "Observation, diagnosis, product quality, safe use, and referral protect both the farmer and the Centre.",
+    title: "Trust may require slowing down",
+    copy: "Observation, safe products, and a useful referral can protect a farmer when the cause of a crop problem is uncertain.",
   },
 };
 
-const emptyForecast = (): DemandForecast => ({
-  seed: { min: 0, max: 0 },
-  fertilizer: { min: 0, max: 0 },
-  cropCare: { min: 0, max: 0 },
-  drip: { min: 0, max: 0 },
-});
-
-const addDemand = (
-  forecast: DemandForecast,
-  key: ProductKey,
-  min: number,
-  max = min,
-) => {
-  forecast[key].min += min;
-  forecast[key].max += max;
-};
-
-function futureDemandAfterDay(
-  dayIndex: number,
-  demandBoost: number,
-  hasFarmerCalls: boolean,
-): DemandForecast {
-  const forecast = emptyForecast();
-  const rainSignalKnown = dayIndex >= 2;
-  const rainMin = rainSignalKnown ? demandBoost : hasFarmerCalls ? Math.max(2, demandBoost - 1) : 2;
-  const rainMax = rainSignalKnown ? demandBoost : hasFarmerCalls ? Math.min(7, demandBoost + 1) : 7;
-
-  if (dayIndex < 1) {
-    addDemand(forecast, "seed", 4);
-    addDemand(forecast, "seed", 2, 6);
-    addDemand(forecast, "fertilizer", 1, 5);
-    addDemand(forecast, "drip", 0, 2);
-  }
-
-  if (dayIndex < 2) {
-    addDemand(forecast, "seed", 5 + rainMin, 5 + rainMax);
-    addDemand(forecast, "fertilizer", 5);
-  }
-
-  if (dayIndex < 3) addDemand(forecast, "cropCare", 2);
-
-  if (dayIndex < 4) {
-    addDemand(forecast, "seed", 4 + Math.floor(rainMin / 2), 4 + Math.floor(rainMax / 2));
-    addDemand(forecast, "fertilizer", 4);
-  }
-
-  return forecast;
-}
-
-const clampPercent = (value: number) => Math.max(0, Math.min(100, value));
-
-const applyEffects = (metrics: Metrics, effects: Partial<Metrics>): Metrics => ({
-  cash: Math.max(0, metrics.cash + (effects.cash ?? 0)),
-  readiness: clampPercent(metrics.readiness + (effects.readiness ?? 0)),
-  trust: clampPercent(metrics.trust + (effects.trust ?? 0)),
-});
+const splitSentences = (text: string) =>
+  text.match(/[^.!?]+[.!?]+|[^.!?]+$/g)?.map((sentence) => sentence.trim()).filter(Boolean) ?? [text];
 
 const formatCash = (amount: number) => {
   const sign = amount < 0 ? "-" : "";
@@ -285,242 +222,58 @@ const formatCash = (amount: number) => {
   return `${sign}TSh ${Math.round(absolute / 1000)}k`;
 };
 
-const formatDelta = (value: number, cash = false) => {
-  if (value === 0) return "No change";
-  if (cash) return `${value > 0 ? "+" : ""}${formatCash(value)}`;
-  return `${value > 0 ? "+" : ""}${value}`;
+const formatCashImpact = (amount: number) => {
+  const sign = amount < 0 ? "-" : "";
+  const absolute = Math.abs(amount);
+  if (absolute >= 1000000) return `${sign}TSh ${(absolute / 1000000).toFixed(2)}m`;
+  return `${sign}TSh ${Math.round(absolute / 1000)}k`;
 };
 
-const formatDemandRange = ({ min, max }: DemandRange) => (min === max ? `${min}` : `${min}–${max}`);
+const formatTime = (minutes: number) => {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return `${hours > 12 ? hours - 12 : hours}:${mins.toString().padStart(2, "0")} ${hours >= 12 ? "PM" : "AM"}`;
+};
 
-const splitSentences = (text: string) =>
-  text.match(/[^.!?]+[.!?]+|[^.!?]+$/g)?.map((sentence) => sentence.trim()).filter(Boolean) ?? [text];
-
-function customersForDay(dayIndex: number, demandBoost: number): Customer[] {
-  if (dayIndex === 0) {
-    return [
-      {
-        id: "rashidi-seed",
-        kind: "sale",
-        name: "Rashidi",
-        icon: "🧑🏾‍🌾",
-        product: "seed",
-        requested: 5,
-        opening: "I registered after the model-farm day. Can I take five tomato seed packs today?",
-        x: 35,
-        y: 52,
-      },
-      {
-        id: "zawadi-fertilizer",
-        kind: "sale",
-        name: "Zawadi",
-        icon: "👩🏿‍🌾",
-        product: "fertilizer",
-        requested: 3,
-        opening: "My vegetable beds are ready. I need three fertilizer bags before I cycle home.",
-        x: 69,
-        y: 54,
-      },
-    ];
-  }
-
-  if (dayIndex === 1) {
-    return [
-      {
-        id: "rehema-credit",
-        kind: "credit",
-        name: "Mama Rehema",
-        icon: "👩🏿‍🌾",
-        opening: "I can pay TSh 220,000 today. My Tarime buyer pays after harvest. Can we build an input package together?",
-        x: 36,
-        y: 53,
-      },
-      {
-        id: "baraka-seed",
-        kind: "sale",
-        name: "Baraka",
-        icon: "🧑🏾",
-        product: "seed",
-        requested: 4,
-        opening: "Four watermelon seed packs, please. I have cash and need to reach the field before noon.",
-        x: 70,
-        y: 49,
-      },
-    ];
-  }
-
-  if (dayIndex === 2) {
-    return [
-      {
-        id: "asha-rain-seed",
-        kind: "sale",
-        name: "Asha",
-        icon: "👩🏾",
-        product: "seed",
-        requested: 5 + demandBoost,
-        opening: "Our farmer group pooled cash after the forecast. How many seed packs can you release?",
-        x: 34,
-        y: 52,
-      },
-      {
-        id: "omari-fertilizer",
-        kind: "sale",
-        name: "Omari",
-        icon: "👨🏿‍🌾",
-        product: "fertilizer",
-        requested: 5,
-        opening: "The soil is prepared and the ox-cart is here. I came for five fertilizer bags.",
-        x: 69,
-        y: 53,
-      },
-    ];
-  }
-
-  if (dayIndex === 3) {
-    return [
-      {
-        id: "juma-advice",
-        kind: "advice",
-        name: "Juma",
-        icon: "🧑🏾‍🌾",
-        opening: "These spots appeared after the rain. A travelling seller says his cheap pesticide fixes everything. What should I do?",
-        x: 36,
-        y: 52,
-      },
-      {
-        id: "nuru-cropcare",
-        kind: "sale",
-        name: "Nuru",
-        icon: "👩🏽‍🌾",
-        product: "cropCare",
-        requested: 2,
-        opening: "I need two registered crop-care units from your usual supplier, with the safe-use instructions.",
-        x: 69,
-        y: 52,
-      },
-    ];
-  }
-
-  return [
-    {
-      id: "halima-seed",
-      kind: "sale",
-      name: "Halima",
-      icon: "👩🏿",
-      product: "seed",
-      requested: 4 + Math.floor(demandBoost / 2),
-      opening: "The demo-day visitors want to plant what they saw. I am collecting seed for our group.",
-      x: 35,
-      y: 52,
-    },
-    {
-      id: "cooperative-fertilizer",
-      kind: "sale",
-      name: "Village cooperative",
-      icon: "👥",
-      product: "fertilizer",
-      requested: 4,
-      opening: "We have one cart and cash from four members. Can you fill our fertilizer order?",
-      x: 69,
-      y: 52,
-    },
-  ];
-}
+const applyEffects = (current: Metrics, effects: Partial<Metrics>): Metrics => ({
+  cash: Math.max(0, current.cash + (effects.cash ?? 0)),
+  trust: Math.max(0, Math.min(100, current.trust + (effects.trust ?? 0))),
+  readiness: Math.max(0, Math.min(100, current.readiness + (effects.readiness ?? 0))),
+});
 
 export default function Home() {
   const [phase, setPhase] = useState<Phase>("title");
-  const [seasonNumber, setSeasonNumber] = useState(0);
-  const [dayIndex, setDayIndex] = useState(0);
+  const [briefingStep, setBriefingStep] = useState(0);
   const [metrics, setMetrics] = useState<Metrics>(INITIAL_METRICS);
   const [inventory, setInventory] = useState<Inventory>(INITIAL_INVENTORY);
-  const [resolvedCustomers, setResolvedCustomers] = useState<string[]>([]);
-  const [servedCustomerIds, setServedCustomerIds] = useState<string[]>([]);
+  const [minutes, setMinutes] = useState(450);
+  const [completedIds, setCompletedIds] = useState<string[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [customerLineIndex, setCustomerLineIndex] = useState(0);
   const [saleQuantity, setSaleQuantity] = useState(0);
-  const [morningFocus, setMorningFocus] = useState<FocusId | null>(null);
-  const [briefingStep, setBriefingStep] = useState(0);
-  const [activeFocus, setActiveFocus] = useState<FocusId | null>(null);
+  const [creditOptionId, setCreditOptionId] = useState<CreditOptionId>("staged");
+  const [creditChecks, setCreditChecks] = useState({ ledger: false, buyer: false });
+  const [adviceChecks, setAdviceChecks] = useState({ leaf: false, label: false, consultant: false });
+  const [ledgerExposure, setLedgerExposure] = useState(0);
   const [toolPanel, setToolPanel] = useState<ToolPanel>(null);
-  const [dayStartMetrics, setDayStartMetrics] = useState<Metrics>(INITIAL_METRICS);
-  const [dayNotes, setDayNotes] = useState<string[]>([]);
-  const [logs, setLogs] = useState<DayLog[]>([]);
-  const [pendingOutcomes, setPendingOutcomes] = useState<PendingOutcome[]>([]);
-  const [morningNews, setMorningNews] = useState<string[]>([]);
-  const [farmersServed, setFarmersServed] = useState(0);
+  const [unlockedNotes, setUnlockedNotes] = useState<string[]>(["starting"]);
+  const [flags, setFlags] = useState<StoryFlags>(INITIAL_FLAGS);
+  const [impact, setImpact] = useState<Impact | null>(null);
   const [player, setPlayer] = useState<Position>(START_POSITION);
   const [toast, setToast] = useState("");
   const [soundOn, setSoundOn] = useState(true);
-  const [orderDraft, setOrderDraft] = useState<Inventory>({ seed: 0, fertilizer: 0, cropCare: 0, drip: 0 });
-  const [supplierIntroStep, setSupplierIntroStep] = useState(0);
-  const [supplierSeenDays, setSupplierSeenDays] = useState<number[]>([]);
-  const [reserveDraft, setReserveDraft] = useState(false);
-  const [reserveStatus, setReserveStatus] = useState<"none" | "held" | "delivered" | "released">("none");
-  const [stocktakeActive, setStocktakeActive] = useState(false);
-  const [followupDays, setFollowupDays] = useState(0);
-  const [modelFarmDays, setModelFarmDays] = useState(0);
-  const [creditPackageId, setCreditPackageId] = useState<CreditPackageId>("contracted");
-  const [creditTerms, setCreditTerms] = useState<"staged" | "harvest">("staged");
-  const [creditChecks, setCreditChecks] = useState({ ledger: false, contract: false });
-  const [adviceChecks, setAdviceChecks] = useState({ leaf: false, label: false, consultant: false });
-  const [unlockedNotes, setUnlockedNotes] = useState<string[]>(["starting"]);
   const audioRef = useRef<AudioContext | null>(null);
 
-  const season = SEASONS[seasonNumber % SEASONS.length];
-  const day = DAYS[dayIndex];
-  const customers = useMemo(
-    () => customersForDay(dayIndex, season.demandBoost),
-    [dayIndex, season.demandBoost],
-  );
-  const unresolvedCustomers = customers.filter((customer) => !resolvedCustomers.includes(customer.id));
-  const selectedCreditPackage = CREDIT_PACKAGES.find((item) => item.id === creditPackageId) ?? CREDIT_PACKAGES[1];
-  const transportFee = stocktakeActive ? 240000 : 320000;
-  const orderUnits = Object.values(orderDraft).reduce((sum, value) => sum + value, 0);
-  const orderProductCost = (Object.keys(orderDraft) as ProductKey[]).reduce(
-    (sum, key) => sum + orderDraft[key] * PRODUCTS[key].cost,
-    0,
-  );
-  const orderTotal = orderProductCost + (orderUnits > 0 ? transportFee : 0) + (reserveDraft ? 120000 : 0);
-  const todayDemand = emptyForecast();
-  unresolvedCustomers.forEach((customer) => {
-    if (customer.kind === "sale") addDemand(todayDemand, customer.product, customer.requested);
-    if (customer.kind === "credit") {
-      addDemand(todayDemand, "seed", 2, 6);
-      addDemand(todayDemand, "fertilizer", 1, 5);
-      addDemand(todayDemand, "drip", 0, 2);
-    }
-  });
-  const demandForecast = futureDemandAfterDay(dayIndex, season.demandBoost, followupDays > 0);
-  PRODUCT_KEYS.forEach((key) => {
-    addDemand(demandForecast, key, todayDemand[key].min, todayDemand[key].max);
-  });
-  const forecastSource = dayIndex >= 2
-    ? "The rain signal is now known, so the range is narrower."
-    : followupDays > 0
-      ? "Farmer calls sharpen the estimate, but rain timing still creates a range."
-      : "Based on registrations, recent vuli sales, the waiting queue, and uncertain rain timing.";
-  const morningStory: StoryLine[] = [
-    ...morningNews.map((text) => ({ speaker: "Morning update", icon: "📻", text })),
-    ...day.story,
-  ];
+  const currentCustomer = CUSTOMERS[completedIds.length];
+  const selectedCreditOption = CREDIT_OPTIONS.find((option) => option.id === creditOptionId) ?? CREDIT_OPTIONS[1];
   const customerLines = selectedCustomer ? splitSentences(selectedCustomer.opening) : [];
-  const supplierIntroLines: StoryLine[] = [
-    {
-      speaker: "Musa",
-      icon: "🧑🏿‍💼",
-      text: `I can deliver today. Transport will cost ${formatCash(transportFee)}${stocktakeActive ? " because you joined the shared route" : ""}.`,
-    },
-    {
-      speaker: "Amina",
-      icon: "👩🏾‍💼",
-      text: "My stock records and farmer information give me a demand range for each product.",
-    },
-    {
-      speaker: "Amina",
-      icon: "👩🏾‍💼",
-      text: "I can keep more cash by covering the lower estimate, or carry a small buffer for a busier week.",
-    },
-  ];
+  const totalInventory = Object.values(inventory).reduce((sum, value) => sum + value, 0);
+  const creditDeposit = Math.min(220000, selectedCreditOption.value);
+  const creditBalance = selectedCreditOption.value - creditDeposit;
+  const creditTimeCost = 25 + Number(creditChecks.ledger) * 10 + Number(creditChecks.buyer) * 15;
+  const adviceEvidenceCount = Number(adviceChecks.leaf) + Number(adviceChecks.label) + Number(adviceChecks.consultant);
+  const adviceTimeCost = (choice: AdviceId) =>
+    (choice === "verify" ? 25 : choice === "sell" ? 15 : 20) + adviceEvidenceCount * 10;
 
   const playTone = useCallback(
     (frequency = 560, duration = 0.07) => {
@@ -543,88 +296,51 @@ export default function Home() {
         oscillator.start();
         oscillator.stop(context.currentTime + duration);
       } catch {
-        // Audio is decorative.
+        // Sound is decorative.
       }
     },
     [soundOn],
   );
 
-  const unlockNote = (id: string) => {
-    setUnlockedNotes((current) => (current.includes(id) ? current : [...current, id]));
-  };
-
-  const addDayNote = (note: string) => {
-    setDayNotes((current) => [...current, note]);
-    setToast(note);
-  };
-
-  const startSeason = () => {
-    playTone(640, 0.12);
-    setPhase("morning");
+  const startDay = () => {
+    setPhase("briefing");
     setBriefingStep(0);
-    setMorningNews(["The Centre opens with limited shelf stock and TSh 4.8m in working capital."]);
+    playTone(640, 0.12);
   };
 
-  const beginDay = () => {
-    if (briefingStep < morningStory.length) return;
-    if (!morningFocus) return;
-    if (dayIndex >= 2 && reserveStatus === "held") return;
-    playTone(700, 0.1);
-    setDayStartMetrics(metrics);
-    let nextMetrics = metrics;
-    let focusNote = "";
-
-    if (morningFocus === "stocktake") {
-      nextMetrics = applyEffects(metrics, { readiness: 3 });
-      setStocktakeActive(true);
-      focusNote = "Counted every shelf and joined Musa's shared delivery route for a lower transport cost.";
-    } else if (morningFocus === "followup") {
-      nextMetrics = applyEffects(metrics, { trust: 3 });
-      setFollowupDays((current) => current + 1);
-      focusNote = "Called farmer clients and clarified plans, buyers, and payment timing.";
-    } else {
-      nextMetrics = applyEffects(metrics, { readiness: 5 });
-      setModelFarmDays((current) => current + 1);
-      focusNote = "Prepared the model farm and inspected crop conditions before opening.";
+  const advanceBriefing = () => {
+    if (briefingStep === BRIEFING.length - 1) {
+      setPhase("shop");
+      setToast("Rashidi is waiting at the counter.");
+      playTone(780, 0.1);
+      return;
     }
-
-    setMetrics(nextMetrics);
-    setDayNotes([focusNote]);
-    setActiveFocus(morningFocus);
-    setPhase("shop");
-    setMorningFocus(null);
-    setMorningNews([]);
-    setToast("The doors are open. You decide who to serve and when to close.");
+    setBriefingStep((current) => current + 1);
+    playTone(700, 0.06);
   };
 
   const openCustomer = (customer: Customer) => {
-    if (resolvedCustomers.includes(customer.id)) return;
-    playTone(760);
+    if (!currentCustomer || customer.id !== currentCustomer.id) return;
     setSelectedCustomer(customer);
     setCustomerLineIndex(0);
     setPlayer({ x: customer.x, y: Math.min(84, customer.y + 9) });
     setToast("");
     if (customer.kind === "sale") {
       setSaleQuantity(Math.min(customer.requested, inventory[customer.product]));
-    }
-    if (customer.kind === "credit") {
-      setCreditPackageId("contracted");
-      setCreditTerms("staged");
-      setCreditChecks({ ledger: false, contract: false });
-    }
-    if (customer.kind === "advice") {
+    } else if (customer.kind === "credit") {
+      setCreditOptionId("staged");
+      setCreditChecks({ ledger: false, buyer: false });
+    } else {
       setAdviceChecks({ leaf: false, label: false, consultant: false });
     }
+    playTone(760);
   };
 
-  const markResolved = (customer: Customer, served = true) => {
-    setResolvedCustomers((current) => (current.includes(customer.id) ? current : [...current, customer.id]));
-    if (served) {
-      setServedCustomerIds((current) => (current.includes(customer.id) ? current : [...current, customer.id]));
-      setFarmersServed((current) => current + 1);
-    }
+  const finishEncounter = (customer: Customer, nextImpact: Impact) => {
+    setCompletedIds((current) => [...current, customer.id]);
     setSelectedCustomer(null);
     setPlayer(START_POSITION);
+    setImpact(nextImpact);
   };
 
   const completeSale = () => {
@@ -632,327 +348,215 @@ export default function Home() {
     const customer = selectedCustomer;
     const quantity = Math.max(0, Math.min(saleQuantity, inventory[customer.product], customer.requested));
     const revenue = quantity * PRODUCTS[customer.product].price;
+    const beforeStock = inventory[customer.product];
+    const afterStock = beforeStock - quantity;
+    const beforeCash = metrics.cash;
+    const beforeTrust = metrics.trust;
     const trustChange = quantity === customer.requested ? 2 : quantity === 0 ? -3 : 0;
+    const timeCost = 25;
 
     setInventory((current) => ({ ...current, [customer.product]: current[customer.product] - quantity }));
     setMetrics((current) => applyEffects(current, { cash: revenue, trust: trustChange }));
-    const note =
+    setMinutes((current) => current + timeCost);
+    setFlags((current) => ({
+      ...current,
+      ...(customer.id === "rashidi-sale" ? { rashidiQuantity: quantity } : { neemaQuantity: quantity }),
+    }));
+
+    const summary =
       quantity === customer.requested
-        ? `Filled ${customer.name}'s full order: ${quantity} ${PRODUCTS[customer.product].shortLabel.toLowerCase()} units.`
+        ? `${customer.name} receives the full request.`
         : quantity === 0
-          ? `${customer.name} left without stock.`
-          : `Partially served ${customer.name}: ${quantity} of ${customer.requested} units.`;
-    addDayNote(note);
-    markResolved(customer, quantity > 0);
-    playTone(quantity === customer.requested ? 880 : 420, 0.11);
+          ? `${customer.name} leaves without seed.`
+          : `${customer.name} accepts ${quantity} of the ${customer.requested} requested packs.`;
+
+    finishEncounter(customer, {
+      title: "The shelf changes immediately",
+      summary,
+      next: customer.next,
+      final: customer.id === CUSTOMERS.at(-1)?.id,
+      changes: [
+        { icon: "🌱", label: `${PRODUCTS[customer.product].shortLabel} on shelf`, before: `${beforeStock}`, after: `${afterStock}`, tone: afterStock < beforeStock ? "negative" : "neutral" },
+        { icon: "🪙", label: "Centre cash", before: formatCashImpact(beforeCash), after: formatCashImpact(beforeCash + revenue), tone: revenue > 0 ? "positive" : "neutral" },
+        { icon: "🕒", label: "Time", before: formatTime(minutes), after: formatTime(minutes + timeCost), tone: "neutral" },
+        { icon: "💚", label: "Farmer trust", before: `${beforeTrust}%`, after: `${Math.max(0, Math.min(100, beforeTrust + trustChange))}%`, tone: trustChange > 0 ? "positive" : trustChange < 0 ? "negative" : "neutral" },
+      ],
+    });
+    playTone(quantity === customer.requested ? 880 : 430, 0.11);
   };
 
-  const packageIsFeasible = (item = selectedCreditPackage) =>
-    inventory.seed >= item.seed && inventory.fertilizer >= item.fertilizer && inventory.drip >= item.drip;
+  const packageIsFeasible = (option = selectedCreditOption) =>
+    inventory.seed >= option.seed && inventory.fertilizer >= option.fertilizer && inventory.drip >= option.drip;
 
   const completeCredit = () => {
     if (!selectedCustomer || selectedCustomer.kind !== "credit" || !packageIsFeasible()) return;
     const customer = selectedCustomer;
-    const packageItem = selectedCreditPackage;
-    const deposit = Math.min(220000, packageItem.value);
-    const exposure = packageItem.value - deposit;
-    const wellStructured =
-      creditTerms === "staged" &&
-      packageItem.id !== "full" &&
-      creditChecks.contract &&
-      (creditChecks.ledger || followupDays > 0);
-    const partlyStructured = creditTerms === "staged" || packageItem.id === "starter";
+    const option = selectedCreditOption;
+    const beforeCash = metrics.cash;
+    const beforeExposure = ledgerExposure;
+    const structured = option.id === "starter" || (creditChecks.ledger && creditChecks.buyer && option.id === "staged");
+    const trustChange = structured ? 3 : 1;
 
     setInventory((current) => ({
       ...current,
-      seed: current.seed - packageItem.seed,
-      fertilizer: current.fertilizer - packageItem.fertilizer,
-      drip: current.drip - packageItem.drip,
+      seed: current.seed - option.seed,
+      fertilizer: current.fertilizer - option.fertilizer,
+      drip: current.drip - option.drip,
     }));
-    setMetrics((current) => applyEffects(current, { cash: deposit, trust: 3 }));
+    setMetrics((current) => applyEffects(current, { cash: creditDeposit, trust: trustChange }));
+    setLedgerExposure((current) => current + creditBalance);
+    setMinutes((current) => current + creditTimeCost);
+    setFlags((current) => ({ ...current, creditOption: option.id, creditStructured: structured }));
+    setUnlockedNotes((current) => (current.includes("credit") ? current : [...current, "credit"]));
 
-    const outcome: PendingOutcome = wellStructured
-      ? {
-          id: "rehema-repayment",
-          dueDay: 4,
-          title: "Rehema's ledger closes cleanly",
-          copy: "Her vegetable sale covers the first stage; the Tarime buyer clears the remaining balance after harvest.",
-          effects: { cash: exposure, trust: 6 },
-        }
-      : partlyStructured
-        ? {
-            id: "rehema-partial",
-            dueDay: 4,
-            title: "One credit payment is delayed",
-            copy: "Rehema pays most of the balance, but an unverified portion waits on a slower buyer.",
-            effects: { cash: Math.round(exposure * 0.72), trust: 1 },
-          }
-        : {
-            id: "rehema-delay",
-            dueDay: 4,
-            title: "The full credit balance does not arrive",
-            copy: "The uncontracted tomatoes sell late, leaving your supplier bill ahead of Rehema's final payment.",
-            effects: { cash: Math.round(exposure * 0.4), trust: -4 },
-          };
-
-    setPendingOutcomes((current) => [...current, outcome]);
-    addDayNote(`Agreed a ${packageItem.label.toLowerCase()} with ${creditTerms === "staged" ? "staged payments" : "one harvest payment"}.`);
-    unlockNote("credit");
-    markResolved(customer);
-    playTone(780, 0.12);
+    finishEncounter(customer, {
+      title: "The package affects stock and the ledger",
+      summary:
+        creditBalance === 0
+          ? "Rehema leaves with a smaller package and no debt."
+          : structured
+            ? "Amina records a manageable package, buyer, balance, and repayment dates."
+            : "Rehema receives the package, but the Centre carries an uncertain balance.",
+      next: customer.next,
+      final: false,
+      changes: [
+        { icon: "🌱", label: "Seed on shelf", before: `${inventory.seed}`, after: `${inventory.seed - option.seed}`, tone: "negative" },
+        { icon: "🪙", label: "Cash received today", before: formatCashImpact(beforeCash), after: formatCashImpact(beforeCash + creditDeposit), tone: "positive" },
+        { icon: "📒", label: "Credit still owed", before: formatCash(beforeExposure), after: formatCash(beforeExposure + creditBalance), tone: creditBalance > 0 ? "negative" : "neutral" },
+        { icon: "🕒", label: "Time", before: formatTime(minutes), after: formatTime(minutes + creditTimeCost), tone: "neutral" },
+      ],
+    });
+    playTone(structured ? 820 : 600, 0.12);
   };
 
-  const completeAdvice = (adviceId: AdviceId) => {
+  const completeAdvice = (choice: AdviceId) => {
     if (!selectedCustomer || selectedCustomer.kind !== "advice") return;
     const customer = selectedCustomer;
-    let immediateEffects: Partial<Metrics> = {};
-    let outcome: PendingOutcome;
-    let note = "";
+    const evidence = adviceEvidenceCount;
+    const beforeCash = metrics.cash;
+    const beforeCropCare = inventory.cropCare;
+    const timeCost = adviceTimeCost(choice);
+    const cashChange = choice === "verify" ? -40000 : choice === "sell" ? PRODUCTS.cropCare.price : 0;
+    const cropCareChange = choice === "sell" ? -1 : 0;
 
-    if (adviceId === "verify") {
-      immediateEffects = { cash: -40000 };
-      const evidenceStrength = Number(adviceChecks.leaf) + Number(adviceChecks.label) + Number(adviceChecks.consultant) + modelFarmDays;
-      outcome = {
-        id: "juma-verified",
-        dueDay: 4,
-        title: "Juma shares a useful diagnosis",
-        copy:
-          evidenceStrength >= 2
-            ? "The evidence points to nutrient stress, not fungal disease. Juma avoids an unnecessary pesticide and explains why at demo day."
-            : "The sale is delayed while better evidence is gathered. Juma values the caution, though the answer takes longer.",
-        effects: { trust: evidenceStrength >= 2 ? 15 : 7, readiness: 2 },
-      };
-      note = "Delayed the sale and asked Juma to verify the diagnosis first.";
-    } else if (adviceId === "sell") {
-      immediateEffects = { cash: 160000 };
-      outcome = {
-        id: "juma-poor-advice",
-        dueDay: 4,
-        title: "The cheap pesticide fails",
-        copy: "The product does not address the problem. Juma loses scarce cash and discusses the advice with other farmers.",
-        effects: { trust: -20, readiness: -4 },
-      };
-      note = "Made a quick pesticide sale before confirming the diagnosis or product.";
-    } else {
-      const warmReferral = adviceChecks.consultant;
-      outcome = {
-        id: "juma-referral",
-        dueDay: 4,
-        title: warmReferral ? "Baraka follows up with Juma" : "Juma continues searching for help",
-        copy: warmReferral
-          ? "Your agri-consultant receives the photos and gives Juma a clear next step before demo day."
-          : "The referral protects Juma from a poor sale, but he leaves without a direct contact or follow-up plan.",
-        effects: { trust: warmReferral ? 6 : -4 },
-      };
-      note = warmReferral ? "Made a warm referral to the BLF agri-consultant." : "Sent Juma away to find outside advice.";
+    setMetrics((current) => applyEffects(current, { cash: cashChange, readiness: choice === "verify" ? 2 : 0 }));
+    if (cropCareChange) setInventory((current) => ({ ...current, cropCare: Math.max(0, current.cropCare + cropCareChange) }));
+    setMinutes((current) => current + timeCost);
+    setFlags((current) => ({ ...current, adviceChoice: choice, adviceEvidence: evidence }));
+    setUnlockedNotes((current) => (current.includes("advice") ? current : [...current, "advice"]));
+
+    const summary =
+      choice === "verify"
+        ? "Amina delays the sale and gathers evidence before recommending anything."
+        : choice === "sell"
+          ? "Amina makes a quick sale before confirming what caused the spots."
+          : adviceChecks.consultant
+            ? "Amina sends Juma's photos directly to the BLF agronomist for follow-up."
+            : "Amina tells Juma to seek help elsewhere without arranging the connection.";
+
+    finishEncounter(customer, {
+      title: "Cash and time move now; trust returns later",
+      summary,
+      next: customer.next,
+      final: false,
+      changes: [
+        { icon: "🪙", label: "Centre cash", before: formatCashImpact(beforeCash), after: formatCashImpact(Math.max(0, beforeCash + cashChange)), tone: cashChange > 0 ? "positive" : cashChange < 0 ? "negative" : "neutral" },
+        { icon: "🧪", label: "Crop-care stock", before: `${beforeCropCare}`, after: `${Math.max(0, beforeCropCare + cropCareChange)}`, tone: cropCareChange < 0 ? "negative" : "neutral" },
+        { icon: "🕒", label: "Time", before: formatTime(minutes), after: formatTime(minutes + timeCost), tone: "neutral" },
+        { icon: "💬", label: "Reputation result", before: "Unknown", after: "Returns at demo", tone: "neutral" },
+      ],
+    });
+    playTone(choice === "sell" ? 430 : 800, 0.12);
+  };
+
+  const finishDay = () => {
+    let trustChange = 0;
+    let readinessChange = 0;
+    if (flags.creditOption && flags.creditStructured) trustChange += 4;
+    if (flags.creditOption === "large" && !flags.creditStructured) trustChange -= 2;
+    if (flags.adviceChoice === "verify") {
+      trustChange += flags.adviceEvidence >= 2 ? 12 : 6;
+      readinessChange += 3;
+    } else if (flags.adviceChoice === "sell") {
+      trustChange -= 14;
+      readinessChange -= 3;
+    } else if (flags.adviceChoice === "refer") {
+      trustChange += flags.adviceEvidence >= 1 ? 6 : -2;
     }
-
-    setMetrics((current) => applyEffects(current, immediateEffects));
-    setPendingOutcomes((current) => [...current, outcome]);
-    addDayNote(`${note} The result will be known at demo day.`);
-    unlockNote("advice");
-    markResolved(customer);
-    playTone(adviceId === "sell" ? 420 : 800, 0.12);
+    setMetrics((current) => applyEffects(current, { trust: trustChange, readiness: readinessChange }));
+    setImpact(null);
+    setPhase("ending");
+    playTone(trustChange >= 0 ? 860 : 470, 0.15);
   };
 
-  const updateOrder = (key: ProductKey, change: number) => {
-    setOrderDraft((current) => ({ ...current, [key]: Math.max(0, Math.min(30, current[key] + change)) }));
-  };
-
-  const applyDemandPlan = (plan: "lower" | "buffer") => {
-    const nextOrder = PRODUCT_KEYS.reduce<Inventory>((draft, key) => {
-      const range = demandForecast[key];
-      const target = plan === "lower" ? range.min : Math.ceil((range.min + range.max) / 2);
-      draft[key] = Math.max(0, Math.min(30, target - inventory[key]));
-      return draft;
-    }, { seed: 0, fertilizer: 0, cropCare: 0, drip: 0 });
-    setOrderDraft(nextOrder);
-    setToast(plan === "lower" ? "Draft order now covers the lower demand estimate." : "Draft order now includes a small demand buffer.");
-  };
-
-  const openSupplier = () => {
-    setOrderDraft({ seed: 0, fertilizer: 0, cropCare: 0, drip: 0 });
-    setReserveDraft(false);
-    setSupplierIntroStep(supplierSeenDays.includes(dayIndex) ? supplierIntroLines.length : 0);
-    setToolPanel("supplier");
-  };
-
-  const advanceSupplierIntro = () => {
-    if (supplierIntroStep >= supplierIntroLines.length - 1) {
-      setSupplierIntroStep(supplierIntroLines.length);
-      setSupplierSeenDays((current) => (current.includes(dayIndex) ? current : [...current, dayIndex]));
-    } else {
-      setSupplierIntroStep((current) => current + 1);
-    }
-    playTone(700, 0.06);
-  };
-
-  const placeSupplierOrder = () => {
-    if (orderTotal <= 0 || orderTotal > metrics.cash) return;
-    setMetrics((current) => applyEffects(current, { cash: -orderTotal }));
-    setInventory((current) => ({
-      seed: current.seed + orderDraft.seed,
-      fertilizer: current.fertilizer + orderDraft.fertilizer,
-      cropCare: current.cropCare + orderDraft.cropCare,
-      drip: current.drip + orderDraft.drip,
-    }));
-    if (reserveDraft) setReserveStatus("held");
-    const orderCopy = orderUnits > 0 ? `${orderUnits} units delivered` : "No immediate stock";
-    addDayNote(`${orderCopy}; supplier cost ${formatCash(orderTotal)}${reserveDraft ? ", including a future seed reservation" : ""}.`);
-    unlockNote("supplier");
-    setToolPanel(null);
-    playTone(670, 0.12);
-  };
-
-  const handleReserve = (choice: "deliver" | "release") => {
-    if (choice === "deliver" && metrics.cash >= 540000) {
-      setMetrics((current) => applyEffects(current, { cash: -540000 }));
-      setInventory((current) => ({ ...current, seed: current.seed + 12 }));
-      setReserveStatus("delivered");
-      setMorningNews((current) => [...current, "Musa delivers the 12 reserved seed packs for the remaining TSh 540,000."]);
-      playTone(760, 0.1);
-    } else if (choice === "release") {
-      setReserveStatus("released");
-      setMorningNews((current) => [...current, "You release the reservation. The TSh 120,000 deposit is not returned, but no more cash is committed."]);
-      playTone(440, 0.1);
-    }
-    // Keep the completed briefing complete when the decision adds one new news item.
-    setBriefingStep((current) => current + 1);
-  };
-
-  const closeShop = () => {
-    const missed = unresolvedCustomers.length;
-    const trustPenalty = missed * -2;
-    const finalMetrics = applyEffects(metrics, { trust: trustPenalty });
-    const focus = MORNING_FOCUSES.find((item) => item.id === activeFocus)?.label ?? "Open shop";
-    const servedToday = servedCustomerIds.length;
-    const missedNote = missed > 0 ? `${missed} visitor${missed === 1 ? "" : "s"} left unserved when the doors closed.` : "Every visitor received an answer today.";
-
-    setMetrics(finalMetrics);
-    setLogs((current) => [
-      ...current,
-      {
-        day: day.date,
-        focus,
-        served: servedToday,
-        missed,
-        cashDelta: finalMetrics.cash - dayStartMetrics.cash,
-        trustDelta: finalMetrics.trust - dayStartMetrics.trust,
-        readinessDelta: finalMetrics.readiness - dayStartMetrics.readiness,
-        notes: [...dayNotes, missedNote],
-      },
-    ]);
-    setDayNotes((current) => [...current, missedNote]);
-    setSelectedCustomer(null);
-    setToolPanel(null);
-    setPhase("evening");
-    setToast("");
-    playTone(520, 0.12);
-  };
-
-  const advanceDay = () => {
-    playTone(700, 0.1);
-    if (dayIndex === DAYS.length - 1) {
-      setPhase("end");
+  const continueAfterImpact = () => {
+    if (!impact) return;
+    if (impact.final) {
+      finishDay();
       return;
     }
-
-    const nextDay = dayIndex + 1;
-    const due = pendingOutcomes.filter((outcome) => outcome.dueDay === nextDay);
-    let nextMetrics = metrics;
-    due.forEach((outcome) => {
-      nextMetrics = applyEffects(nextMetrics, outcome.effects);
-    });
-    const news = due.map((outcome) => {
-      const impact = [
-        outcome.effects.cash ? `${formatDelta(outcome.effects.cash, true)} capital` : "",
-        outcome.effects.trust ? `${formatDelta(outcome.effects.trust)} trust` : "",
-        outcome.effects.readiness ? `${formatDelta(outcome.effects.readiness)} readiness` : "",
-      ].filter(Boolean).join(" · ");
-      return `${outcome.title}: ${outcome.copy}${impact ? ` Impact: ${impact}.` : ""}`;
-    });
-    if (nextDay === 2) news.unshift(season.reveal);
-
-    setMetrics(nextMetrics);
-    setPendingOutcomes((current) => current.filter((outcome) => outcome.dueDay !== nextDay));
-    setDayIndex(nextDay);
-    setResolvedCustomers([]);
-    setServedCustomerIds([]);
-    setMorningFocus(null);
-    setBriefingStep(0);
-    setActiveFocus(null);
-    setMorningNews(news);
-    setStocktakeActive(false);
-    setPlayer(START_POSITION);
-    setPhase("morning");
+    const nextCustomer = CUSTOMERS[completedIds.length];
+    if (nextCustomer?.id === "juma-advice") setMinutes((current) => Math.max(current, 810));
+    if (nextCustomer?.id === "neema-finale") setMinutes((current) => Math.max(current, 900));
+    setToast(impact.next);
+    setImpact(null);
+    playTone(700, 0.07);
   };
 
   const replay = () => {
-    setSeasonNumber((current) => current + 1);
-    setDayIndex(0);
+    setPhase("title");
+    setBriefingStep(0);
     setMetrics(INITIAL_METRICS);
     setInventory(INITIAL_INVENTORY);
-    setResolvedCustomers([]);
-    setServedCustomerIds([]);
+    setMinutes(450);
+    setCompletedIds([]);
     setSelectedCustomer(null);
     setCustomerLineIndex(0);
-    setMorningFocus(null);
-    setBriefingStep(0);
-    setActiveFocus(null);
+    setSaleQuantity(0);
+    setCreditOptionId("staged");
+    setCreditChecks({ ledger: false, buyer: false });
+    setAdviceChecks({ leaf: false, label: false, consultant: false });
+    setLedgerExposure(0);
     setToolPanel(null);
-    setLogs([]);
-    setPendingOutcomes([]);
-    setMorningNews([]);
-    setFarmersServed(0);
+    setUnlockedNotes(["starting"]);
+    setFlags(INITIAL_FLAGS);
+    setImpact(null);
     setPlayer(START_POSITION);
     setToast("");
-    setReserveStatus("none");
-    setSupplierIntroStep(0);
-    setSupplierSeenDays([]);
-    setStocktakeActive(false);
-    setFollowupDays(0);
-    setModelFarmDays(0);
-    setUnlockedNotes(["starting"]);
-    setPhase("title");
   };
 
-  const coachCopy = [
-    "A full shelf is not the same as a healthy business. Compare likely demand, transport cost, and the cash another opportunity may need.",
-    "Credit is a design problem, not only yes or no. Package size, evidence, deposits, dates, and follow-up can change the risk.",
-    "The forecast changed demand, but your earlier inventory choices determine whether that becomes revenue, idle stock, or a stock-out.",
-    "A knowledge hub protects trust by separating observation from diagnosis. A quick sale today can return as a reputation cost later.",
-    "Today reveals the network effect: customers remember whether the Centre kept promises, offered sound advice, and had stock when it mattered.",
-  ][dayIndex];
+  const coachCopy = !currentCustomer
+    ? "The day is nearly complete. Compare what remains on the shelf with the promises you made."
+    : currentCustomer.kind === "sale"
+      ? "A cash sale helps today. Also ask what this shelf must still do for the people you already expect."
+      : currentCustomer.kind === "credit"
+        ? "A good credit decision is not only yes or no. Check the person, buyer, package size, balance, and dates."
+        : "You do not need to guess a diagnosis. Separate what you observe from what still needs expert confirmation.";
 
-  const totalInventory = Object.values(inventory).reduce((sum, value) => sum + value, 0);
-  const score =
-    Number(metrics.cash >= 3000000) +
-    Number(metrics.trust >= 78) +
-    Number(metrics.readiness >= 65) +
-    Number(farmersServed >= 8);
-  const ending =
-    score >= 4
-      ? {
-          badge: "Community anchor",
-          heading: "The Centre became a trusted part of the farming network.",
-          copy: "You balanced service, working capital, evidence, and relationships across an uncertain week.",
-        }
-      : score >= 2
-        ? {
-            badge: "Growing enterprise",
-            heading: "The Centre made progress, with trade-offs to revisit.",
-            copy: "Some systems held while others created pressure. The next season will reveal different demand.",
-          }
-        : {
-            badge: "Tough trading week",
-            heading: "The Centre needs a more resilient plan.",
-            copy: "Cash, stock, service, and trust interacted in ways that made recovery difficult—but the next season can play differently.",
-          };
+  const creditOutcome =
+    flags.creditOption === "starter"
+      ? "Rehema leaves with a smaller package fully covered by her payment. She knows exactly what she can use now."
+      : flags.creditStructured
+        ? "Rehema's buyer confirms the staged dates. Both Rehema and Amina leave with a clear written plan."
+        : flags.creditOption
+          ? "Rehema receives useful inputs, but a large or weakly checked balance remains in Amina's ledger."
+          : "Rehema's request was not completed.";
+
+  const adviceOutcome =
+    flags.adviceChoice === "verify"
+      ? flags.adviceEvidence >= 2
+        ? "The agronomist's reply points to nutrient stress, not the disease Juma feared. He avoids an unnecessary pesticide."
+        : "Juma appreciates that Amina did not guess, although the final answer still requires follow-up."
+      : flags.adviceChoice === "sell"
+        ? "At the demonstration, Juma learns the quick pesticide sale did not match the likely problem. Other farmers hear the story."
+        : flags.adviceChoice === "refer" && flags.adviceEvidence >= 1
+          ? "The warm referral reaches Juma before the demonstration and gives him a practical next step."
+          : "Juma was protected from an uncertain sale, but the referral gave him no direct path to help.";
 
   return (
     <main className="game-page">
       <section className="game-frame" aria-label="Kijani Centre agribusiness life simulation">
-        <div className={`map-stage weather-${dayIndex}`}>
+        <div className="map-stage weather-0">
           <div className="sun-glow" aria-hidden="true" />
           <div className="drifting-cloud cloud-one" aria-hidden="true" />
           <div className="drifting-cloud cloud-two" aria-hidden="true" />
@@ -963,181 +567,117 @@ export default function Home() {
                 <span className="tiny-leaf" aria-hidden="true">🌿</span>
                 <p className="game-kicker">Better Life Farming · Tanzania</p>
                 <h1>Kijani Centre</h1>
-                <p className="game-subtitle">
-                  Run the shop for five days. Choose how to spend your morning, manage real stock, serve farmers, and live with consequences that may arrive later.
-                </p>
+                <p className="game-subtitle">Live one connected market day. Serve farmers, manage limited stock and credit, give responsible advice, and see every decision return later.</p>
                 <div className="title-details">
-                  <span>🗓️ 5 shop days</span>
-                  <span>🌦️ Uncertain demand</span>
-                  <span>🔁 A different next season</span>
+                  <span>🗓️ One market day</span>
+                  <span>👥 Four connected encounters</span>
+                  <span>⚖️ Visible trade-offs</span>
                 </div>
-                <button className="primary-button start-button" type="button" onClick={startSeason}>
-                  Begin the vuli week
-                </button>
-                <p className="small-note">Your goal is not a perfect answer. Keep the Centre useful, solvent, and trusted.</p>
+                <button className="primary-button start-button" type="button" onClick={startDay}>Begin market day</button>
+                <p className="small-note">There is no perfect route. Try to keep the Centre useful, solvent, and trusted.</p>
               </div>
             </div>
           )}
 
-          {phase !== "title" && phase !== "end" && (
-            <>
-              <header className="hud pixel-panel">
-                <div className="hud-date">
-                  <span className="hud-day">Day {dayIndex + 1}/{DAYS.length}</span>
-                  <span>{day.date}</span>
-                  <span>{day.time}</span>
-                  <span>{day.weather}</span>
-                </div>
-                <div className="hud-stats" aria-label="Centre status">
-                  <span title="Available capital">🪙 <strong>{formatCash(metrics.cash)}</strong></span>
-                  <span title="Stock units">📦 <strong>{totalInventory}</strong></span>
-                  <span title="Farmer trust">💚 <strong>{metrics.trust}%</strong></span>
-                  <span title="Centre readiness">🌿 <strong>{metrics.readiness}%</strong></span>
-                </div>
-                <button className="icon-button" type="button" aria-label={soundOn ? "Turn sound off" : "Turn sound on"} onClick={() => setSoundOn((current) => !current)}>
-                  {soundOn ? "🔊" : "🔇"}
-                </button>
-              </header>
-
-              {phase === "shop" && (
-                <>
-                  <aside className="day-card pixel-panel">
-                    <span className="eyebrow">Today at the Centre</span>
-                    <h1>{day.title}</h1>
-                    <p>{day.briefing}</p>
-                    <div className="visitor-heading">
-                      <span>Waiting visitors</span>
-                      <b>{resolvedCustomers.length}/{customers.length}</b>
-                    </div>
-                    <div className="visitor-list">
-                      {customers.map((customer) => {
-                        const done = resolvedCustomers.includes(customer.id);
-                        return (
-                          <button key={customer.id} className={done ? "served" : ""} type="button" disabled={done} onClick={() => openCustomer(customer)}>
-                            <span>{done ? "✓" : customer.icon}</span>
-                            <span><strong>{customer.name}</strong><small>{customer.kind === "sale" ? `${customer.requested} ${PRODUCTS[customer.product].shortLabel.toLowerCase()} units` : customer.kind === "credit" ? "Credit conversation" : "Crop advice"}</small></span>
-                            <b>{done ? "Done" : "Talk →"}</b>
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <button className="close-shop-button" type="button" onClick={closeShop}>
-                      Close shop for the day
-                    </button>
-                    <small className="close-warning">You may close early. Unserved farmers will remember.</small>
-                  </aside>
-
-                  <aside className="tool-dock pixel-panel" aria-label="Centre tools">
-                    <span className="eyebrow">Amina&apos;s desk</span>
-                    <div className="tool-buttons">
-                      <button type="button" onClick={() => setToolPanel("inventory")}><span>📦</span><strong>Stockroom</strong><small>{totalInventory} units</small></button>
-                      <button type="button" onClick={() => setToolPanel("ledger")}><span>📒</span><strong>Ledger</strong><small>{pendingOutcomes.length} pending</small></button>
-                      <button type="button" onClick={() => setToolPanel("notebook")}><span>📖</span><strong>Notebook</strong><small>{unlockedNotes.length} notes</small></button>
-                      <button type="button" onClick={() => setToolPanel("coach")}><span>📱</span><strong>ALP Coach</strong><small>Optional nudge</small></button>
-                    </div>
-                  </aside>
-
-                  <button className="world-marker supplier-marker" type="button" style={{ left: "54%", top: "38%" }} onClick={openSupplier} aria-label="Call Musa the supplier">
-                    <span className="marker-icon">☎️</span>
-                    <span className="marker-label">Order stock</span>
-                  </button>
-
-                  {customers.map((customer) => {
-                    const done = resolvedCustomers.includes(customer.id);
-                    return (
-                      <button
-                        key={customer.id}
-                        type="button"
-                        className={`world-marker customer-marker ${done ? "served-marker" : ""}`}
-                        style={{ left: `${customer.x}%`, top: `${customer.y}%` }}
-                        onClick={() => openCustomer(customer)}
-                        disabled={done}
-                        aria-label={`${done ? "Served" : "Talk to"} ${customer.name}`}
-                      >
-                        <span className="npc-sprite" aria-hidden="true">{done ? "✅" : customer.icon}</span>
-                        <span className="marker-label">{done ? "Served" : customer.name}</span>
-                      </button>
-                    );
-                  })}
-
-                  <div className="player-sprite" style={{ left: `${player.x}%`, top: `${player.y}%` }} aria-label="Amina, the BLF agri-entrepreneur" role="img">
-                    <span className="player-hat" />
-                    <span className="player-head" />
-                    <span className="player-body" />
-                    <span className="player-legs" />
-                  </div>
-
-                  {toast && <div className="game-toast pixel-panel" role="status">{toast}</div>}
-                </>
-              )}
-            </>
+          {phase !== "title" && phase !== "ending" && (
+            <header className="hud pixel-panel">
+              <div className="hud-date">
+                <span className="hud-day">Market day</span>
+                <span>Sat · 14 Oct</span>
+                <span>{formatTime(minutes)}</span>
+                <span>🌤️ 25°</span>
+              </div>
+              <div className="hud-stats" aria-label="Centre status">
+                <span title="Available capital">🪙 <strong>{formatCash(metrics.cash)}</strong></span>
+                <span title="Stock units">📦 <strong>{totalInventory}</strong></span>
+                <span title="Farmer trust">💚 <strong>{metrics.trust}%</strong></span>
+                <span title="Credit still owed">📒 <strong>{formatCash(ledgerExposure)}</strong></span>
+              </div>
+              <button className="icon-button" type="button" aria-label={soundOn ? "Turn sound off" : "Turn sound on"} onClick={() => setSoundOn((current) => !current)}>{soundOn ? "🔊" : "🔇"}</button>
+            </header>
           )}
 
-          {phase === "morning" && (
+          {phase === "briefing" && (
             <div className="screen-overlay morning-screen">
               <div className="morning-card pixel-panel">
                 <div className="morning-heading">
                   <span className="morning-icon" aria-hidden="true">🌅</span>
-                  <div><span className="eyebrow">Morning {dayIndex + 1} of {DAYS.length}</span><h1>{day.title}</h1><p>{day.date} · {day.weather}</p></div>
+                  <div><span className="eyebrow">7:30 AM · Before opening</span><h1>Vuli market day</h1><p>One day · four connected challenges</p></div>
                 </div>
-                {briefingStep < morningStory.length ? (
-                  <div className="story-stage morning-story">
-                    <div className="story-speaker"><span aria-hidden="true">{morningStory[briefingStep].icon}</span><strong>{morningStory[briefingStep].speaker}</strong></div>
-                    <p>{morningStory[briefingStep].text}</p>
-                    <div className="story-footer">
-                      <div className="story-progress" aria-label={`Briefing line ${briefingStep + 1} of ${morningStory.length}`}>
-                        {morningStory.map((_, index) => <span key={index} className={`story-dot ${index < briefingStep ? "done" : index === briefingStep ? "current" : ""}`} />)}
-                      </div>
-                      <button className="primary-button story-next" type="button" onClick={() => { setBriefingStep((current) => Math.min(morningStory.length, current + 1)); playTone(700, 0.06); }}>
-                        {briefingStep === morningStory.length - 1 ? "I understand — choose a plan" : "Continue →"}
-                      </button>
+                <div className="story-stage morning-story">
+                  <div className="story-speaker"><span aria-hidden="true">{BRIEFING[briefingStep].icon}</span><strong>{BRIEFING[briefingStep].speaker}</strong></div>
+                  <p>{BRIEFING[briefingStep].text}</p>
+                  <div className="story-footer">
+                    <div className="story-progress" aria-label={`Briefing line ${briefingStep + 1} of ${BRIEFING.length}`}>
+                      {BRIEFING.map((_, index) => <span key={index} className={`story-dot ${index < briefingStep ? "done" : index === briefingStep ? "current" : ""}`} />)}
                     </div>
+                    <button className="primary-button story-next" type="button" onClick={advanceBriefing}>{briefingStep === BRIEFING.length - 1 ? "Open the Centre →" : "Continue →"}</button>
                   </div>
-                ) : (
-                  <div className="morning-actions">
-                    {dayIndex >= 2 && reserveStatus === "held" && (
-                      <div className="reserve-call">
-                        <div><span className="eyebrow">Musa is on the phone</span><strong>Your 12 reserved seed packs are ready.</strong><p>Pay the remaining TSh 540,000 for delivery, or release the option and lose only the deposit.</p></div>
-                        <div><button type="button" disabled={metrics.cash < 540000} onClick={() => handleReserve("deliver")}>Take delivery</button><button type="button" onClick={() => handleReserve("release")}>Release reserve</button></div>
-                      </div>
-                    )}
-                    <span className="section-label">Now choose one morning priority</span>
-                    <div className="focus-grid">
-                      {MORNING_FOCUSES.map((focus) => (
-                        <button key={focus.id} type="button" className={morningFocus === focus.id ? "selected" : ""} onClick={() => setMorningFocus(focus.id)}>
-                          <span>{focus.icon}</span><strong>{focus.label}</strong><p>{focus.copy}</p><small>{focus.effect}</small>
-                        </button>
-                      ))}
-                    </div>
-                    <button className="primary-button open-shop-button" type="button" disabled={!morningFocus || (dayIndex >= 2 && reserveStatus === "held")} onClick={beginDay}>
-                      {dayIndex >= 2 && reserveStatus === "held" ? "Answer Musa before opening" : "Open the Centre →"}
-                    </button>
-                  </div>
-                )}
+                </div>
               </div>
             </div>
           )}
 
-          {phase === "evening" && logs.length > 0 && (
-            <div className="screen-overlay evening-screen">
-              <div className="evening-card pixel-panel">
-                <div className="evening-heading"><span aria-hidden="true">🌙</span><div><span className="eyebrow">Shop closed · {day.date}</span><h1>What changed today?</h1></div></div>
-                <div className="evening-metrics">
-                  <div className={logs.at(-1)!.cashDelta >= 0 ? "positive" : "negative"}><span>Capital</span><strong>{formatDelta(logs.at(-1)!.cashDelta, true)}</strong><small>Now {formatCash(metrics.cash)}</small></div>
-                  <div className={logs.at(-1)!.trustDelta >= 0 ? "positive" : "negative"}><span>Trust</span><strong>{formatDelta(logs.at(-1)!.trustDelta)}</strong><small>Now {metrics.trust}%</small></div>
-                  <div className={logs.at(-1)!.readinessDelta >= 0 ? "positive" : "negative"}><span>Readiness</span><strong>{formatDelta(logs.at(-1)!.readinessDelta)}</strong><small>Now {metrics.readiness}%</small></div>
+          {phase === "shop" && (
+            <>
+              <aside className="day-card pixel-panel">
+                <span className="eyebrow">Today&apos;s story</span>
+                <h1>{currentCustomer ? `Chapter ${completedIds.length + 1} of ${CUSTOMERS.length}` : "Market day complete"}</h1>
+                <p>{currentCustomer ? "One situation at a time. Listen first, then decide." : "Every planned encounter has been handled."}</p>
+
+                {currentCustomer && (
+                  <div className="visitor-list current-visitor">
+                    <button type="button" onClick={() => openCustomer(currentCustomer)}>
+                      <span>{currentCustomer.icon}</span>
+                      <span><strong>{currentCustomer.name}</strong><small>{currentCustomer.kind === "sale" ? "Purchase request" : currentCustomer.kind === "credit" ? "Credit request" : "Crop advice"}</small></span>
+                      <b>Talk →</b>
+                    </button>
+                  </div>
+                )}
+
+                <div className="story-trail" aria-label="Market day progress">
+                  {CUSTOMERS.map((customer, index) => (
+                    <span key={customer.id} className={completedIds.includes(customer.id) ? "done" : index === completedIds.length ? "current" : "locked"}>
+                      <b>{completedIds.includes(customer.id) ? "✓" : index + 1}</b>
+                      {completedIds.includes(customer.id) ? customer.name : index === completedIds.length ? "Now" : "Later"}
+                    </span>
+                  ))}
                 </div>
-                <div className="day-journal"><span className="eyebrow">Amina&apos;s journal</span>{logs.at(-1)!.notes.map((note) => <p key={note}>• {note}</p>)}</div>
-                <button className="primary-button" type="button" onClick={advanceDay}>{dayIndex === DAYS.length - 1 ? "Review the vuli week" : "Go to the next morning"} →</button>
+              </aside>
+
+              <aside className="tool-dock pixel-panel" aria-label="Centre tools">
+                <span className="eyebrow">Amina&apos;s desk</span>
+                <div className="tool-buttons">
+                  <button type="button" onClick={() => setToolPanel("inventory")}><span>📦</span><strong>Stockroom</strong><small>{totalInventory} units</small></button>
+                  <button type="button" onClick={() => setToolPanel("ledger")}><span>📒</span><strong>Ledger</strong><small>{formatCash(ledgerExposure)} owed</small></button>
+                  <button type="button" onClick={() => setToolPanel("notebook")}><span>📖</span><strong>Notebook</strong><small>{unlockedNotes.length} notes</small></button>
+                  <button type="button" onClick={() => setToolPanel("coach")}><span>📱</span><strong>ALP Coach</strong><small>Optional nudge</small></button>
+                </div>
+              </aside>
+
+              {currentCustomer && (
+                <button className="world-marker customer-marker current-customer-marker" type="button" style={{ left: `${currentCustomer.x}%`, top: `${currentCustomer.y}%` }} onClick={() => openCustomer(currentCustomer)} aria-label={`Talk to ${currentCustomer.name}`}>
+                  <span className="npc-sprite" aria-hidden="true">{currentCustomer.icon}</span>
+                  <span className="marker-label">{currentCustomer.name}</span>
+                </button>
+              )}
+
+              <div className="player-sprite" style={{ left: `${player.x}%`, top: `${player.y}%` }} aria-label="Amina, the BLF agri-entrepreneur" role="img">
+                <span className="player-hat" />
+                <span className="player-head" />
+                <span className="player-body" />
+                <span className="player-legs" />
               </div>
-            </div>
+
+              {toast && <div className="game-toast pixel-panel" role="status">{toast}</div>}
+            </>
           )}
 
           {selectedCustomer && (
             <div className="interaction-scrim">
               <div className="interaction-sheet pixel-panel" role="dialog" aria-modal="true" aria-label={`Conversation with ${selectedCustomer.name}`}>
                 <button className="sheet-close" type="button" aria-label="Return to the shop" onClick={() => setSelectedCustomer(null)}>×</button>
-                <div className="conversation-heading"><span>{selectedCustomer.icon}</span><div><span className="eyebrow">At the counter</span><h2>{selectedCustomer.name}</h2><p>{customerLineIndex < customerLines.length ? "Listen to the request before deciding what to do." : "Now choose how Amina will respond."}</p></div></div>
+                <div className="conversation-heading"><span>{selectedCustomer.icon}</span><div><span className="eyebrow">At the counter · {formatTime(minutes)}</span><h2>{selectedCustomer.name}</h2><p>{customerLineIndex < customerLines.length ? "Listen to the request before deciding what to do." : "Now choose how Amina will respond."}</p></div></div>
 
                 {customerLineIndex < customerLines.length ? (
                   <div className="story-stage customer-story">
@@ -1147,51 +687,84 @@ export default function Home() {
                       <div className="story-progress" aria-label={`Request line ${customerLineIndex + 1} of ${customerLines.length}`}>
                         {customerLines.map((_, index) => <span key={index} className={`story-dot ${index < customerLineIndex ? "done" : index === customerLineIndex ? "current" : ""}`} />)}
                       </div>
-                      <button className="primary-button story-next" type="button" onClick={() => { setCustomerLineIndex((current) => Math.min(customerLines.length, current + 1)); playTone(700, 0.06); }}>
-                        {customerLineIndex === customerLines.length - 1 ? "Respond to the request →" : "Continue →"}
-                      </button>
+                      <button className="primary-button story-next" type="button" onClick={() => { setCustomerLineIndex((current) => Math.min(customerLines.length, current + 1)); playTone(700, 0.06); }}>{customerLineIndex === customerLines.length - 1 ? "Respond to the request →" : "Continue →"}</button>
                     </div>
                   </div>
                 ) : (
                   <>
-                {selectedCustomer.kind === "sale" && (
-                  <div className="sale-builder">
-                    <div className="stock-snapshot"><span>{PRODUCTS[selectedCustomer.product].icon}</span><div><small>On your shelf</small><strong>{inventory[selectedCustomer.product]} {PRODUCTS[selectedCustomer.product].shortLabel.toLowerCase()} units</strong></div><div><small>Requested</small><strong>{selectedCustomer.requested}</strong></div></div>
-                    <label htmlFor="sale-quantity">Quantity to sell <strong>{saleQuantity}</strong></label>
-                    <input id="sale-quantity" type="range" min="0" max={Math.min(selectedCustomer.requested, inventory[selectedCustomer.product])} value={saleQuantity} onChange={(event) => setSaleQuantity(Number(event.target.value))} />
-                    <div className="transaction-preview"><span>Cash received <strong>{formatCash(saleQuantity * PRODUCTS[selectedCustomer.product].price)}</strong></span><span>Stock after sale <strong>{inventory[selectedCustomer.product] - saleQuantity}</strong></span></div>
-                    <button className="primary-button" type="button" onClick={completeSale}>{saleQuantity === selectedCustomer.requested ? "Fill the order" : saleQuantity === 0 ? "Send the customer away" : "Offer a partial order"}</button>
-                  </div>
-                )}
+                    {selectedCustomer.kind === "sale" && (
+                      <div className="sale-builder">
+                        <div className="known-context"><span>📌</span><div><strong>What Amina already knows</strong><p>{selectedCustomer.context}</p></div></div>
+                        <div className="stock-snapshot"><span>{PRODUCTS[selectedCustomer.product].icon}</span><div><small>On the shelf now</small><strong>{inventory[selectedCustomer.product]} {PRODUCTS[selectedCustomer.product].shortLabel.toLowerCase()} units</strong></div><div><small>Requested</small><strong>{selectedCustomer.requested}</strong></div></div>
+                        <label htmlFor="sale-quantity">Quantity to sell <strong>{saleQuantity}</strong></label>
+                        <input id="sale-quantity" type="range" min="0" max={Math.min(selectedCustomer.requested, inventory[selectedCustomer.product])} value={saleQuantity} onChange={(event) => setSaleQuantity(Number(event.target.value))} />
+                        <div className="live-tradeoff">
+                          <span><small>Cash received</small><strong>+{formatCash(saleQuantity * PRODUCTS[selectedCustomer.product].price)}</strong></span>
+                          <span><small>Stock remaining</small><strong>{inventory[selectedCustomer.product] - saleQuantity}</strong></span>
+                          <span className={selectedCustomer.id === "rashidi-sale" && inventory.seed - saleQuantity < 4 ? "warning" : "good"}><small>{selectedCustomer.id === "rashidi-sale" ? "For Rehema later" : "Final shelf result"}</small><strong>{selectedCustomer.id === "rashidi-sale" ? inventory.seed - saleQuantity >= 4 ? "Enough for 4" : `${4 - (inventory.seed - saleQuantity)} short` : `${inventory.seed - saleQuantity} left`}</strong></span>
+                          <span><small>Time after sale</small><strong>{formatTime(minutes + 25)}</strong></span>
+                        </div>
+                        <button className="primary-button" type="button" onClick={completeSale}>{saleQuantity === selectedCustomer.requested ? "Confirm full sale" : saleQuantity === 0 ? "Explain that no stock can be released" : `Offer ${saleQuantity} packs`}</button>
+                      </div>
+                    )}
 
-                {selectedCustomer.kind === "credit" && (
-                  <div className="credit-builder">
-                    <div className="evidence-desk"><button type="button" className={creditChecks.ledger ? "checked" : ""} onClick={() => setCreditChecks((current) => ({ ...current, ledger: true }))}><span>📒</span><strong>Open her ledger</strong><small>{creditChecks.ledger ? "Two smaller balances were repaid on time." : "Optional"}</small></button><button type="button" className={creditChecks.contract ? "checked" : ""} onClick={() => setCreditChecks((current) => ({ ...current, contract: true }))}><span>📄</span><strong>Ask about the buyer</strong><small>{creditChecks.contract ? "The contract covers about two-thirds of a hectare." : "Optional"}</small></button></div>
-                    <span className="section-label">Build the package</span>
-                    <div className="package-grid">
-                      {CREDIT_PACKAGES.map((item) => {
-                        const feasible = packageIsFeasible(item);
-                        return <button key={item.id} type="button" disabled={!feasible} className={creditPackageId === item.id ? "selected" : ""} onClick={() => setCreditPackageId(item.id)}><strong>{item.label}</strong><span>{formatCash(item.value)}</span><small>{item.seed} seed · {item.fertilizer} fertilizer · {item.drip} drip</small>{!feasible && <em>Not enough stock</em>}</button>;
-                      })}
-                    </div>
-                    <span className="section-label">Choose repayment timing</span>
-                    <div className="terms-toggle"><button type="button" className={creditTerms === "staged" ? "selected" : ""} onClick={() => setCreditTerms("staged")}><strong>Staged payments</strong><small>Deposit, vegetable sale, then tomato buyer</small></button><button type="button" className={creditTerms === "harvest" ? "selected" : ""} onClick={() => setCreditTerms("harvest")}><strong>One harvest payment</strong><small>Higher exposure until the buyer pays</small></button></div>
-                    <div className="credit-preview"><span>Paid today <strong>{formatCash(Math.min(220000, selectedCreditPackage.value))}</strong></span><span>Balance left in your ledger <strong>{formatCash(selectedCreditPackage.value - Math.min(220000, selectedCreditPackage.value))}</strong></span></div>
-                    <button className="primary-button" type="button" disabled={!packageIsFeasible()} onClick={completeCredit}>Agree terms and record the credit</button>
-                    <p className="uncertainty-note">You will not know the repayment result until later in the week.</p>
-                  </div>
-                )}
+                    {selectedCustomer.kind === "credit" && (
+                      <div className="credit-builder">
+                        <div className="evidence-desk">
+                          <button type="button" className={creditChecks.ledger ? "checked" : ""} onClick={() => setCreditChecks((current) => ({ ...current, ledger: true }))}><span>📒</span><strong>Check repayment record</strong><small>{creditChecks.ledger ? "Two smaller balances were repaid on time." : "+10 minutes"}</small></button>
+                          <button type="button" className={creditChecks.buyer ? "checked" : ""} onClick={() => setCreditChecks((current) => ({ ...current, buyer: true }))}><span>📞</span><strong>Confirm the buyer</strong><small>{creditChecks.buyer ? "The buyer confirms a smaller vegetable order." : "+15 minutes"}</small></button>
+                        </div>
+                        <span className="section-label">Choose a package—not a random quantity</span>
+                        <div className="package-grid simple-packages">
+                          {CREDIT_OPTIONS.map((option) => {
+                            const feasible = packageIsFeasible(option);
+                            return <button key={option.id} type="button" disabled={!feasible} className={creditOptionId === option.id ? "selected" : ""} onClick={() => setCreditOptionId(option.id)}><strong>{option.label}</strong><span>{formatCash(option.value)}</span><small>{option.explanation}</small><em>{option.seed} seed · {option.fertilizer} fertilizer{option.drip ? ` · ${option.drip} drip` : ""}</em>{!feasible && <b>Not enough stock remains</b>}</button>;
+                          })}
+                        </div>
+                        <div className="live-tradeoff">
+                          <span><small>Seed after package</small><strong>{inventory.seed - selectedCreditOption.seed}</strong></span>
+                          <span><small>Paid today</small><strong>+{formatCash(creditDeposit)}</strong></span>
+                          <span className={creditBalance > 300000 ? "warning" : "good"}><small>Credit still owed</small><strong>{formatCash(creditBalance)}</strong></span>
+                          <span><small>Time after checks</small><strong>{formatTime(minutes + creditTimeCost)}</strong></span>
+                        </div>
+                        <button className="primary-button" type="button" disabled={!packageIsFeasible()} onClick={completeCredit}>Agree, write the balance, and release stock</button>
+                      </div>
+                    )}
 
-                {selectedCustomer.kind === "advice" && (
-                  <div className="advice-builder">
-                    <div className="evidence-desk three"><button type="button" className={adviceChecks.leaf ? "checked" : ""} onClick={() => setAdviceChecks((current) => ({ ...current, leaf: true }))}><span>🍃</span><strong>Inspect leaf</strong><small>{adviceChecks.leaf ? "Spots could be disease, nutrient stress, or water splash." : "Optional"}</small></button><button type="button" className={adviceChecks.label ? "checked" : ""} onClick={() => setAdviceChecks((current) => ({ ...current, label: true }))}><span>🧪</span><strong>Read the label</strong><small>{adviceChecks.label ? "Batch number and local registration details are missing." : "Optional"}</small></button><button type="button" className={adviceChecks.consultant ? "checked" : ""} onClick={() => setAdviceChecks((current) => ({ ...current, consultant: true }))}><span>📞</span><strong>Call Baraka</strong><small>{adviceChecks.consultant ? "He asks for photos and offers a same-day follow-up." : "Optional"}</small></button></div>
-                    <span className="section-label">What do you do now?</span>
-                    <div className="advice-actions"><button type="button" onClick={() => completeAdvice("verify")}><strong>Verify before recommending</strong><small>Spend TSh 40,000 on follow-up; delay the sale.</small></button><button type="button" onClick={() => completeAdvice("sell")}><strong>Sell the cheap product now</strong><small>Receive TSh 160,000; the product result comes later.</small></button><button type="button" onClick={() => completeAdvice("refer")}><strong>Refer Juma elsewhere</strong><small>The quality of the referral depends on your preparation.</small></button></div>
-                    <p className="uncertainty-note">Juma&apos;s crop—and the effect on your reputation—will be visible at demo day.</p>
-                  </div>
-                )}
+                    {selectedCustomer.kind === "advice" && (
+                      <div className="advice-builder">
+                        <div className="evidence-desk three">
+                          <button type="button" className={adviceChecks.leaf ? "checked" : ""} onClick={() => setAdviceChecks((current) => ({ ...current, leaf: true }))}><span>🍃</span><strong>Inspect the leaf</strong><small>{adviceChecks.leaf ? "The spots may have more than one cause." : "Look before deciding"}</small></button>
+                          <button type="button" className={adviceChecks.label ? "checked" : ""} onClick={() => setAdviceChecks((current) => ({ ...current, label: true }))}><span>🧪</span><strong>Read seller&apos;s label</strong><small>{adviceChecks.label ? "Registration and batch details are missing." : "Check the product"}</small></button>
+                          <button type="button" className={adviceChecks.consultant ? "checked" : ""} onClick={() => setAdviceChecks((current) => ({ ...current, consultant: true }))}><span>📞</span><strong>Call the agronomist</strong><small>{adviceChecks.consultant ? "She asks for photos and replies before the demo." : "Create a warm referral"}</small></button>
+                        </div>
+                        <span className="section-label">Choose what Amina does now</span>
+                        <div className="advice-actions consequence-actions">
+                          <button type="button" onClick={() => completeAdvice("verify")}><strong>Verify before recommending</strong><small>−TSh 40k · +{adviceTimeCost("verify")} min · protects against a wrong sale</small></button>
+                          <button type="button" disabled={inventory.cropCare < 1} onClick={() => completeAdvice("sell")}><strong>Sell a product now</strong><small>+TSh 160k · +{adviceTimeCost("sell")} min · reputation result unknown</small></button>
+                          <button type="button" onClick={() => completeAdvice("refer")}><strong>Refer Juma</strong><small>No sale · +{adviceTimeCost("refer")} min · stronger if you called first</small></button>
+                        </div>
+                      </div>
+                    )}
                   </>
                 )}
+              </div>
+            </div>
+          )}
+
+          {impact && (
+            <div className="interaction-scrim impact-scrim">
+              <div className="impact-sheet pixel-panel" role="dialog" aria-modal="true" aria-label="Decision impact">
+                <span className="eyebrow">Decision made · what changed?</span>
+                <h2>{impact.title}</h2>
+                <p className="impact-summary">{impact.summary}</p>
+                <div className="impact-grid">
+                  {impact.changes.map((change) => (
+                    <div key={change.label} className={change.tone ?? "neutral"}><span>{change.icon}</span><small>{change.label}</small><div><del>{change.before}</del><b>→</b><strong>{change.after}</strong></div></div>
+                  ))}
+                </div>
+                <div className="next-scene"><span>▶</span><p>{impact.next}</p></div>
+                <button className="primary-button" type="button" onClick={continueAfterImpact}>{impact.final ? "See how the day ends →" : "Continue the story →"}</button>
               </div>
             </div>
           )}
@@ -1201,144 +774,30 @@ export default function Home() {
               <div className="tool-sheet pixel-panel" role="dialog" aria-modal="true" aria-label={`${toolPanel} panel`}>
                 <button className="sheet-close" type="button" aria-label="Close tool" onClick={() => setToolPanel(null)}>×</button>
 
-                {toolPanel === "inventory" && <><span className="eyebrow">Live stockroom</span><h2>What is actually on the shelf?</h2><div className="inventory-grid">{(Object.keys(PRODUCTS) as ProductKey[]).map((key) => <div key={key}><span>{PRODUCTS[key].icon}</span><strong>{inventory[key]}</strong><small>{PRODUCTS[key].label}</small><em>Buy {formatCash(PRODUCTS[key].cost)} · Sell {formatCash(PRODUCTS[key].price)}</em></div>)}</div><button className="primary-button" type="button" onClick={openSupplier}>Call Musa to order stock</button></>}
+                {toolPanel === "inventory" && <><span className="eyebrow">Fixed stock for today</span><h2>What is actually on the shelf?</h2><p className="sheet-intro">No delivery arrives today. These are the items Amina must allocate across the people who visit.</p><div className="inventory-grid">{(Object.keys(PRODUCTS) as ProductKey[]).map((key) => <div key={key}><span>{PRODUCTS[key].icon}</span><strong>{inventory[key]}</strong><small>{PRODUCTS[key].label}</small></div>)}</div></>}
 
-                {toolPanel === "supplier" && (
-                  supplierIntroStep < supplierIntroLines.length ? (
-                    <>
-                      <span className="eyebrow">Call with Musa · Arusha distributor</span>
-                      <h2>Listen before opening the order book</h2>
-                      <div className="story-stage supplier-story">
-                        <div className="story-speaker"><span aria-hidden="true">{supplierIntroLines[supplierIntroStep].icon}</span><strong>{supplierIntroLines[supplierIntroStep].speaker}</strong></div>
-                        <p>{supplierIntroLines[supplierIntroStep].text}</p>
-                        <div className="story-footer">
-                          <div className="story-progress" aria-label={`Supplier call line ${supplierIntroStep + 1} of ${supplierIntroLines.length}`}>
-                            {supplierIntroLines.map((_, index) => <span key={index} className={`story-dot ${index < supplierIntroStep ? "done" : index === supplierIntroStep ? "current" : ""}`} />)}
-                          </div>
-                          <button className="primary-button story-next" type="button" onClick={advanceSupplierIntro}>
-                            {supplierIntroStep === supplierIntroLines.length - 1 ? "Open the order book →" : "Continue →"}
-                          </button>
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                  <>
-                    <span className="eyebrow">Musa · distributor in Arusha</span>
-                    <h2>Plan today&apos;s stock order</h2>
-                    <p className="sheet-intro">Use the demand estimate below, then decide how much cash you want to keep available. Stock arrives today.</p>
+                {toolPanel === "ledger" && <><span className="eyebrow">Business ledger</span><h2>What has the Centre promised?</h2>{ledgerExposure === 0 ? <p className="empty-state">No customer balance is currently owed.</p> : <div className="pending-list"><div><span>Mama Rehema</span><strong>{formatCash(ledgerExposure)} still owed</strong><p>{flags.creditStructured ? "The balance, buyer, and payment dates were checked and recorded." : "The balance remains, but some supporting information is missing."}</p></div></div>}<div className="ledger-rule"><strong>Stock and credit are connected</strong><p>Products leave the shelf today, while some cash may return later.</p></div></>}
 
-                    <div className="demand-board">
-                      <div className="demand-board-heading">
-                        <span aria-hidden="true">🧮</span>
-                        <div>
-                          <strong>Amina&apos;s demand estimate</strong>
-                          <small>Expected units from now {dayIndex === DAYS.length - 1 ? "until closing" : "through Saturday"}</small>
-                        </div>
-                      </div>
-                      <p>{forecastSource}</p>
-                      <div className="demand-guide">
-                        <span><b>Lower number</b> likely demand</span>
-                        <span><b>Upper number</b> possible busy-week demand</span>
-                      </div>
-                    </div>
+                {toolPanel === "coach" && <><span className="eyebrow">Optional ALP Coach</span><h2>A nudge, not an answer</h2><div className="coach-message"><span>📱</span><p>{coachCopy}</p></div><p className="uncertainty-note">The coach cannot know every farmer&apos;s future result. Use it to ask a better question, not to reveal a perfect choice.</p></>}
 
-                    <span className="section-label">Choose a starting plan, or build your own</span>
-                    <div className="plan-presets">
-                      <button type="button" onClick={() => applyDemandPlan("lower")}>
-                        <strong>Cover the lower estimate</strong>
-                        <small>Uses less cash, but a busy week may cause a stock-out.</small>
-                      </button>
-                      <button type="button" onClick={() => applyDemandPlan("buffer")}>
-                        <strong>Add a small safety buffer</strong>
-                        <small>Uses more cash and aims for the middle of the range.</small>
-                      </button>
-                    </div>
-
-                    <div className="order-grid">
-                      {PRODUCT_KEYS.map((key) => {
-                        const stockAfterOrder = inventory[key] + orderDraft[key];
-                        const demand = demandForecast[key];
-                        let signalClass = "balanced";
-                        let signal = "Within the expected range";
-                        if (demand.max === 0) {
-                          signalClass = stockAfterOrder > 0 ? "extra" : "balanced";
-                          signal = stockAfterOrder > 0 ? "No demand signal yet" : "No demand expected";
-                        } else if (stockAfterOrder < demand.min) {
-                          signalClass = "short";
-                          signal = `${demand.min - stockAfterOrder} short of the lower estimate`;
-                        } else if (stockAfterOrder > demand.max) {
-                          signalClass = "extra";
-                          signal = `${stockAfterOrder - demand.max} above the upper estimate`;
-                        }
-
-                        return (
-                          <div className={`order-line ${signalClass}`} key={key}>
-                            <span className="order-product-icon">{PRODUCTS[key].icon}</span>
-                            <div className="order-product-main">
-                              <div className="order-product-title">
-                                <strong>{PRODUCTS[key].shortLabel}</strong>
-                                <small>{formatCash(PRODUCTS[key].cost)} each</small>
-                              </div>
-                              <div className="demand-numbers">
-                                <span>On shelf <b>{inventory[key]}</b></span>
-                                <span>Waiting today <b>{formatDemandRange(todayDemand[key])}</b></span>
-                                <span>Expected {dayIndex === DAYS.length - 1 ? "today" : "this week"} <b>{formatDemandRange(demand)}</b></span>
-                              </div>
-                              <div className="stock-result">
-                                <span>After this order: <b>{stockAfterOrder}</b></span>
-                                <strong>{signal}</strong>
-                              </div>
-                            </div>
-                            <div className="order-stepper">
-                              <small>Order now</small>
-                              <div className="stepper">
-                                <button type="button" aria-label={`Remove ${PRODUCTS[key].shortLabel}`} onClick={() => updateOrder(key, -1)}>−</button>
-                                <strong>{orderDraft[key]}</strong>
-                                <button type="button" aria-label={`Add ${PRODUCTS[key].shortLabel}`} onClick={() => updateOrder(key, 1)}>+</button>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {reserveStatus === "none" && (
-                      <label className="reserve-option">
-                        <input type="checkbox" checked={reserveDraft} onChange={(event) => setReserveDraft(event.target.checked)} />
-                        <span><strong>Keep an option for 12 more seed packs</strong><small>Pay TSh 120,000 now. After the rain update, choose whether to pay the remaining TSh 540,000.</small></span>
-                      </label>
-                    )}
-                    <div className="order-total">
-                      <span>Products <strong>{formatCash(orderProductCost)}</strong></span>
-                      <span>Transport {stocktakeActive && <em>shared-route price</em>} <strong>{orderUnits > 0 ? formatCash(transportFee) : formatCash(0)}</strong></span>
-                      {reserveDraft && <span>Seed option deposit <strong>{formatCash(120000)}</strong></span>}
-                      <b>Total paid today <strong>{formatCash(orderTotal)}</strong></b>
-                      <span>Cash left after payment <strong>{formatCash(Math.max(0, metrics.cash - orderTotal))}</strong></span>
-                    </div>
-                    <button className="primary-button" type="button" disabled={orderTotal <= 0 || orderTotal > metrics.cash} onClick={placeSupplierOrder}>
-                      {orderTotal > metrics.cash ? "This order costs more cash than you have" : "Place order and pay"}
-                    </button>
-                  </>
-                  )
-                )}
-
-                {toolPanel === "ledger" && <><span className="eyebrow">Business ledger</span><h2>Promises still moving through the week</h2>{pendingOutcomes.length === 0 ? <p className="empty-state">No unsettled customer promises yet.</p> : <div className="pending-list">{pendingOutcomes.map((outcome) => <div key={outcome.id}><span>Due Day {outcome.dueDay + 1}</span><strong>{outcome.title}</strong><p>The final amount or relationship effect is still uncertain.</p></div>)}</div>}<span className="section-label">Completed days</span><div className="compact-log">{logs.length === 0 ? <p>No day has closed yet.</p> : logs.map((log) => <div key={log.day}><strong>{log.day}</strong><span>{log.served} served · {log.missed} missed</span><span>{formatDelta(log.cashDelta, true)} cash · {formatDelta(log.trustDelta)} trust</span></div>)}</div></>}
-
-                {toolPanel === "coach" && <><span className="eyebrow">Optional ALP Coach</span><h2>A nudge, not an answer</h2><div className="coach-message"><span>📱</span><p>{coachCopy}</p></div><p className="uncertainty-note">The coach does not know this season&apos;s rainfall or how every customer will respond.</p></>}
-
-                {toolPanel === "notebook" && <><span className="eyebrow">Amina&apos;s field notebook</span><h2>Ideas discovered through play</h2><div className="notebook-list">{unlockedNotes.map((id, index) => <article key={id}><span>{index + 1}</span><div><strong>{NOTES[id].title}</strong><p>{NOTES[id].copy}</p></div></article>)}</div><p className="uncertainty-note">More notes appear when you use supplier, credit, and advice systems.</p></>}
+                {toolPanel === "notebook" && <><span className="eyebrow">Amina&apos;s field notebook</span><h2>Ideas discovered through play</h2><div className="notebook-list">{unlockedNotes.map((id, index) => <article key={id}><span>{index + 1}</span><div><strong>{NOTEBOOK[id].title}</strong><p>{NOTEBOOK[id].copy}</p></div></article>)}</div></>}
               </div>
             </div>
           )}
 
-          {phase === "end" && (
+          {phase === "ending" && (
             <div className="screen-overlay ending-screen">
               <div className="ending-card pixel-panel">
-                <div className="ending-header"><span aria-hidden="true">🌻</span><div><span className="ending-badge">{ending.badge}</span><h1>{ending.heading}</h1><p>{ending.copy}</p></div></div>
-                <div className="ending-stats"><div><span>Capital</span><strong>{formatCash(metrics.cash)}</strong></div><div><span>Trust</span><strong>{metrics.trust}%</strong></div><div><span>Readiness</span><strong>{metrics.readiness}%</strong></div><div><span>Farmers served</span><strong>{farmersServed}</strong></div></div>
-                <div className="season-story"><span className="section-label">Your five-day shop journal</span>{logs.map((log) => <article key={log.day}><div><strong>{log.day}</strong><span>{log.served} served · {log.missed} missed</span></div><div className="log-deltas"><span>{formatDelta(log.cashDelta, true)}</span><span>{formatDelta(log.trustDelta)} trust</span><span>{formatDelta(log.readinessDelta)} readiness</span></div><p>{log.notes.at(-1)}</p></article>)}</div>
-                <div className="ending-reflection"><span className="eyebrow">ALP Coach reflection</span><p>Which result came from a decision made days earlier? What would you change if next week&apos;s rain and customer order were different?</p></div>
-                <button className="primary-button" type="button" onClick={replay}>Play a different vuli week ↻</button>
+                <div className="ending-header"><span aria-hidden="true">🌻</span><div><span className="ending-badge">Market day complete</span><h1>The community remembers the whole day</h1><p>The result is not one score. It is the combination of stock, cash, promises, time, and trust.</p></div></div>
+                <div className="ending-stats"><div><span>Capital</span><strong>{formatCash(metrics.cash)}</strong></div><div><span>Trust</span><strong>{metrics.trust}%</strong></div><div><span>Stock left</span><strong>{totalInventory}</strong></div><div><span>Credit owed</span><strong>{formatCash(ledgerExposure)}</strong></div></div>
+                <div className="community-return">
+                  <article><span>🧑🏾‍🌾</span><div><strong>Rashidi</strong><p>{flags.rashidiQuantity === 5 ? "He planted with the full amount he requested, but five packs left the shelf early." : flags.rashidiQuantity ? `He adjusted his plan after receiving ${flags.rashidiQuantity} packs instead of five.` : "He left without seed and may try another retailer next time."}</p></div></article>
+                  <article><span>👩🏿‍🌾</span><div><strong>Mama Rehema</strong><p>{creditOutcome}</p></div></article>
+                  <article><span>🧑🏾‍🌾</span><div><strong>Juma</strong><p>{adviceOutcome}</p></div></article>
+                  <article><span>👩🏾</span><div><strong>Neema and the demo group</strong><p>{flags.neemaQuantity === 2 ? "The two interested farmers leave with seed and a practical connection to the demonstration." : flags.neemaQuantity ? `Only ${flags.neemaQuantity} of the two farmers can take seed today.` : "The demonstration creates interest, but no seed remains for the group."}</p></div></article>
+                </div>
+                <div className="ending-reflection"><span className="eyebrow">ALP Coach reflection</span><p>Which early choice changed the most later conversations: the first seed sale, the credit package, or the time spent checking Juma&apos;s problem?</p></div>
+                <button className="primary-button" type="button" onClick={replay}>Replay the same day differently ↻</button>
               </div>
             </div>
           )}
