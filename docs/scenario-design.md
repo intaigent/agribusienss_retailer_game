@@ -22,7 +22,13 @@ Mama Rehema: package size, checks, deposit, and credit balance
 Closing: books reconcile and the Balanced Centre Score is shared
 ```
 
-Only the current encounter is visible. A character explains the situation sentence by sentence. The ALP Coach then connects the live facts to three short curriculum prompts before the controls unlock. After the choice, a dedicated impact screen shows exactly what changed, and the player classifies the resulting source documents before the next character enters.
+Only the current encounter is visible. A character explains the situation sentence by sentence. Coach Zawadi then connects the live facts to three short curriculum prompts before the controls unlock. After the choice, the customer reacts before any dashboard appears. A second beat shows exactly what changed, and a third asks the player to put the resulting paper slips into the right physical books before the next character enters.
+
+```text
+Choice → customer response → visible consequence → paper trail → next neighbour
+```
+
+That order is deliberate: players first feel what their choice did to a person, then understand the system behind it. Rashidi can grin, fold his notes away, or redraw his nursery plan; Rehema can relax or feel the weight of a vague promise; Juma can feel protected, doubtful, or genuinely connected to an agronomist. The reactions are not decorative—they interpret the trade-off in the customer's own words.
 
 ## Resources and trade-offs
 
@@ -34,7 +40,7 @@ Only the current encounter is visible. A character explains the situation senten
 | Time | A live deadline, action costs, and early/late result | Checking information can improve a decision but may delay the 3:00 PM demonstration |
 | Trust | Immediate service effects and closing consequences | Customer care and responsible advice influence relationships |
 
-The interface previews the direct trade-off before confirmation and then repeats it as a before-and-after change. Consequences that genuinely remain uncertain—such as Juma's reputation effect—are marked as returning at the demonstration instead of being presented as certain.
+The interface previews the direct trade-off before confirmation and then repeats it as a before-and-after change. Consequences that genuinely remain uncertain—such as Juma's reputation effect—are marked as returning at the demonstration instead of being presented as certain. Metrics remain useful evidence, but character language and physical objects—the wooden shelf, notes in the tin, the wall clock, and coloured books—carry the moment-to-moment experience.
 
 ## ALP material used
 
@@ -52,7 +58,7 @@ Supplier Relationships and demand forecasting remain valuable advanced topics, b
 
 ## Learning and scoring layer
 
-- The ALP Coach appears at every decision with “what you know,” “what to consider,” and “what to record,” using the current stock, balance, evidence, and time.
+- Coach Zawadi appears at every decision with “look at the counter,” “think one step ahead,” and “leave a paper trail,” using the current stock, balance, evidence, and time.
 - Bookkeeping is a source-document matching activity; amounts are pre-calculated so beginners practise classification and reconciliation rather than arithmetic.
 - A wrong ledger match produces a curriculum explanation and another attempt. First-attempt accuracy affects the score, but mistakes never block learning.
 - The 100-point Balanced Centre Score is transparent: farmer value 20, bookkeeping 25, stewardship 20, risk 20, and time 15.

@@ -13,6 +13,8 @@ The prototype follows one connected vuli market day rather than several thin cou
 5. Neema brings the final demonstration-group request, reflecting both earlier stock allocation and whether Amina arrived on time.
 6. The community returns at closing, the books reconcile, and a transparent Balanced Centre Score explains the result.
 
+Every decision lands in three short beats: the customer responds in their own voice, the player watches the choice move the shelf, cash tin, clock, or relationship, and then Amina puts the matching paper slip into a physical colour-coded book. The customer reaction comes first so a decision feels human before it becomes a number.
+
 Stock ordering and demand forecasting are intentionally outside this beginner prototype. There is no arbitrary quantity to order: the player allocates a known shelf across known people. Inventory still matters, but as a visible constraint rather than a forecasting calculation.
 
 ## Interaction principles
@@ -20,12 +22,14 @@ Stock ordering and demand forecasting are intentionally outside this beginner pr
 - Context appears one short line at a time.
 - Decision controls unlock only after the player hears the request.
 - Only the current encounter is revealed; later characters enter through the story.
-- After every request, the ALP Coach presents three curriculum-grounded prompts: what is known, what to consider, and what must be recorded.
-- A “what changed?” screen follows every decision and shows before-and-after cash, stock, time, trust, or credit.
+- After every request, Coach Zawadi presents three curriculum-grounded prompts in counter language: look at the counter, think one step ahead, and leave a paper trail.
+- Customers grin, hesitate, redraw plans, ask follow-up questions, or carry worries away according to the player's choice.
+- A consequence scene follows the reaction and shows before-and-after cash, stock, time, trust, or credit.
 - Each consequence creates source documents that the player classifies into the cash ledger, inventory card, customer credit ledger, expense ledger, or follow-up log.
 - Incorrect bookkeeping choices receive an instructional Coach explanation and can be corrected without blocking the learner.
 - The 3:00 PM deadline changes the following scene and the closing outcome; elapsed time comes from in-game actions rather than reading speed.
 - Characters return at closing, connecting earlier choices to later consequences.
+- Course language stays behind the scenes; visible copy favours neighbourly dialogue, physical objects, and small moments of humour.
 
 ## Balanced Centre Score
 

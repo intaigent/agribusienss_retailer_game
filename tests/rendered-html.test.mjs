@@ -6,22 +6,25 @@ test("models one connected Tanzania market day", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
 
   assert.match(page, /Better Life Farming · Tanzania/);
-  assert.match(page, /One market day/);
-  assert.match(page, /Four connected encounters/);
+  assert.match(page, /One Saturday/);
+  assert.match(page, /Four neighbours/);
   assert.match(page, /rashidi-sale/);
   assert.match(page, /rehema-credit/);
   assert.match(page, /juma-advice/);
   assert.match(page, /neema-finale/);
+  assert.match(page, /Rashidi leans his bicycle/);
+  assert.match(page, /Juma hurries in with a tomato leaf/);
   assert.doesNotMatch(page, /Run the shop for five days|Day \{dayIndex/);
 });
 
 test("uses fixed stock allocation instead of stock-order forecasting", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
 
-  assert.match(page, /No new delivery will arrive today/);
-  assert.match(page, /Fixed stock for today/);
-  assert.match(page, /Mama Rehema is expected later and may need four seed packs/);
+  assert.match(page, /supplier's truck will not reach us today/);
+  assert.match(page, /Shelf and back room/);
+  assert.match(page, /Eight packs were counted this morning/);
   assert.match(page, /For Rehema later/);
+  assert.match(page, /No truck is coming to rescue an empty shelf/);
   assert.doesNotMatch(page, /Plan today&apos;s stock order|Cover the lower estimate|Add a small safety buffer|openSupplier|orderDraft/);
 });
 
@@ -30,63 +33,71 @@ test("reveals conversations before showing decisions", async () => {
 
   assert.match(page, /Briefing line/);
   assert.match(page, /customerLineIndex < customerLines.length/);
-  assert.match(page, /Listen to the request before deciding what to do/);
+  assert.match(page, /First, hear them out/);
   assert.match(page, /Respond to the request/);
-  assert.match(page, /One situation at a time\. Listen first, then decide/);
+  assert.match(page, /The counter is quiet\. Amina's choice comes next/);
+  assert.match(page, /scene-setting/);
 });
 
-test("shows immediate trade-offs after every decision", async () => {
+test("lets customers react before revealing the wider trade-off", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
 
-  assert.match(page, /Decision made · what changed/);
-  assert.match(page, /The shelf changes immediately/);
-  assert.match(page, /The package affects stock and the ledger/);
-  assert.match(page, /The safer work has a deadline cost/);
-  assert.match(page, /Continue the story/);
-  assert.match(page, /Time after sale/);
+  assert.match(page, /reaction: StoryLine/);
+  assert.match(page, /impactStep === 0/);
+  assert.match(page, /Right there at the counter/);
+  assert.match(page, /customer-reaction/);
+  assert.match(page, /Rashidi grins/);
+  assert.match(page, /Rehema traces/);
+  assert.match(page, /Juma wraps/);
+  assert.match(page, /Watch the choice travel/);
+  assert.match(page, /One choice has already moved the day/);
+  assert.match(page, /The paperwork is still on the counter/);
+  assert.match(page, /Cash in the tin/);
   assert.match(page, /Credit still owed/);
 });
 
 test("keeps representative BLF learning inside the story", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
 
-  assert.match(page, /Check repayment record/);
-  assert.match(page, /Confirm the buyer/);
-  assert.match(page, /Verify before recommending/);
-  assert.match(page, /ALP Coach · before you decide/);
-  assert.match(page, /What you know/);
-  assert.match(page, /What to consider/);
-  assert.match(page, /What to record/);
-  assert.match(page, /BLF · Inventory Recordkeeping \+ Cash Ledger/);
-  assert.match(page, /Ideas discovered through play/);
-  assert.match(page, /A balanced result rewards farmer value/);
+  assert.match(page, /Turn back through Rehema&apos;s old account/);
+  assert.match(page, /Call the vegetable buyer/);
+  assert.match(page, /Keep the leaf for a proper check/);
+  assert.match(page, /Coach Zawadi has a thought/);
+  assert.match(page, /Look at the counter/);
+  assert.match(page, /Think one step ahead/);
+  assert.match(page, /Leave a paper trail/);
+  assert.match(page, /From your BLF training/);
+  assert.match(page, /An empty space has a memory/);
+  assert.match(page, /A promise needs a shape/);
 });
 
 test("connects each consequence to active bookkeeping practice", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
 
-  assert.match(page, /Close the loop before continuing/);
-  assert.match(page, /Where should Amina record this source document/);
+  assert.match(page, /One last job before the next neighbour/);
+  assert.match(page, /A paper slip is waiting beside the cash tin/);
   assert.match(page, /Cash ledger/);
   assert.match(page, /Inventory card/);
   assert.match(page, /Customer credit ledger/);
   assert.match(page, /Expense ledger/);
   assert.match(page, /Follow-up log/);
-  assert.match(page, /Do the books agree with the Centre/);
-  assert.match(page, /Closing reconciliation complete/);
+  assert.match(page, /Green cash book/);
+  assert.match(page, /Blue stock card/);
+  assert.match(page, /Does the paper match the shop/);
+  assert.match(page, /The cash tin, shelf, and books agree/);
 });
 
 test("makes the demonstration deadline and final score consequential", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
 
   assert.match(page, /DEMO_DEADLINE = 900/);
-  assert.match(page, /Every check advances the clock immediately/);
+  assert.match(page, /Each action below turns the hands of the clock/);
   assert.match(page, /inspectAdvice\("consultant", 20\)/);
   assert.match(page, /The model-farm demonstration started/);
   assert.match(page, /Balanced Centre Score breakdown/);
-  assert.match(page, /Farmer value/);
-  assert.match(page, /Bookkeeping/);
-  assert.match(page, /Share my result/);
+  assert.match(page, /Farmers helped/);
+  assert.match(page, /Books kept/);
+  assert.match(page, /Share this market day/);
 });
 
 test("is a standard Next.js project ready for Vercel", async () => {

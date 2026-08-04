@@ -21,6 +21,7 @@ type SaleCustomer = Position & {
   icon: string;
   product: ProductKey;
   requested: number;
+  arrival: string;
   opening: string;
   context: string;
   next: string;
@@ -31,6 +32,7 @@ type CreditCustomer = Position & {
   kind: "credit";
   name: string;
   icon: string;
+  arrival: string;
   opening: string;
   next: string;
 };
@@ -40,6 +42,7 @@ type AdviceCustomer = Position & {
   kind: "advice";
   name: string;
   icon: string;
+  arrival: string;
   opening: string;
   next: string;
 };
@@ -66,6 +69,7 @@ type CoachGuidance = {
 type Impact = {
   title: string;
   summary: string;
+  reaction: StoryLine;
   next: string;
   final: boolean;
   changes: Array<{
@@ -92,11 +96,11 @@ const INITIAL_INVENTORY: Inventory = { seed: 8, fertilizer: 4, cropCare: 2, drip
 const START_POSITION: Position = { x: 51, y: 77 };
 const DEMO_DEADLINE = 900;
 const BOOKS: Array<{ id: BookKind; icon: string; short: string }> = [
-  { id: "Cash ledger", icon: "🪙", short: "Cash ledger" },
-  { id: "Inventory card", icon: "📦", short: "Inventory card" },
-  { id: "Customer credit ledger", icon: "🤝", short: "Credit ledger" },
-  { id: "Expense ledger", icon: "🧾", short: "Expense ledger" },
-  { id: "Follow-up log", icon: "📌", short: "Follow-up log" },
+  { id: "Cash ledger", icon: "🟢", short: "Green cash book" },
+  { id: "Inventory card", icon: "🔵", short: "Blue stock card" },
+  { id: "Customer credit ledger", icon: "🟤", short: "Brown credit book" },
+  { id: "Expense ledger", icon: "🟠", short: "Orange expense book" },
+  { id: "Follow-up log", icon: "📓", short: "Pocket follow-up book" },
 ];
 const INITIAL_FLAGS: StoryFlags = {
   rashidiQuantity: null,
@@ -118,22 +122,22 @@ const BRIEFING: StoryLine[] = [
   {
     speaker: "Amina",
     icon: "👩🏾‍💼",
-    text: "Today is the Centre's vuli market day and the model-farm gathering begins at three o'clock.",
+    text: "The shutters are up. Motorbikes hum along the road, and the model-farm gathering begins at three o'clock.",
   },
   {
     speaker: "Amina",
     icon: "👩🏾‍💼",
-    text: "I counted eight seed packs and four fertilizer bags. No new delivery will arrive today.",
+    text: "I counted eight tomato seed packs and four fertilizer bags. The supplier's truck will not reach us today.",
   },
   {
     speaker: "Neema",
     icon: "👩🏾",
-    text: "Rashidi is bringing cash for five seed packs, and Mama Rehema asked whether credit might be possible.",
+    text: "Rashidi is cycling over with cash for five packs. Mama Rehema is also coming with her farm notebook to discuss credit.",
   },
   {
     speaker: "Amina",
     icon: "👩🏾‍💼",
-    text: "Every item I give to one farmer will be unavailable to the next, and every conversation uses time.",
+    text: "Then I had better listen carefully, keep the books honest, and still reach the model plot before the farmers do.",
   },
 ];
 
@@ -145,9 +149,10 @@ const CUSTOMERS: Customer[] = [
     icon: "🧑🏾‍🌾",
     product: "seed",
     requested: 5,
-    opening: "Good morning, Amina. I brought cash for five tomato seed packs. We want to plant before the next rain.",
-    context: "Mama Rehema is expected later and may need four seed packs as part of her package.",
-    next: "As Rashidi leaves, Mama Rehema arrives with her farm records.",
+    arrival: "Rashidi leans his bicycle against the fence and places a neatly folded bundle of notes on the counter.",
+    opening: "Habari za asubuhi, Amina! I brought cash for five tomato seed packs. If we plant before the next rain, the nursery will be ready on time.",
+    context: "Eight packs were counted this morning. Mama Rehema said she may need four later, and today's delivery truck is not coming.",
+    next: "Rashidi pedals toward his farm. A few minutes later, Mama Rehema appears at the doorway with a well-used notebook.",
     x: 36,
     y: 53,
   },
@@ -156,8 +161,9 @@ const CUSTOMERS: Customer[] = [
     kind: "credit",
     name: "Mama Rehema",
     icon: "👩🏿‍🌾",
-    opening: "I can pay TSh 220,000 today. My vegetable buyer pays next month. Can we agree on a package that my farm and your Centre can both manage?",
-    next: "The morning continues. At 2:00 PM, Juma hurries in carrying a spotted tomato leaf.",
+    arrival: "Mama Rehema opens her farm notebook to a page of dates, harvest amounts, and two crossed-out balances.",
+    opening: "I have TSh 220,000 with me today. My vegetable buyer pays next month. Can we make a package that helps my farm without leaving either of us worried?",
+    next: "The agreement is folded into Rehema's notebook. At 2:00 PM, Juma hurries in with a tomato leaf wrapped in newspaper.",
     x: 64,
     y: 51,
   },
@@ -166,8 +172,9 @@ const CUSTOMERS: Customer[] = [
     kind: "advice",
     name: "Juma",
     icon: "🧑🏾‍🌾",
-    opening: "These spots appeared after the rain. A travelling seller says his cheap pesticide fixes everything. I need your advice before I spend my money.",
-    next: "At 3:00 PM, the model-farm demonstration begins and Neema approaches with the final group request.",
+    arrival: "Juma carefully unwraps a spotted tomato leaf. Behind him, the wall clock sounds louder than it did this morning.",
+    opening: "These spots came after the rain. A travelling seller says his cheap pesticide fixes everything. I trust this Centre, Amina—what should I do before I spend my money?",
+    next: "At 3:00 PM, voices rise from the model plot. Neema waves from beside the demonstration bed.",
     x: 37,
     y: 50,
   },
@@ -178,9 +185,10 @@ const CUSTOMERS: Customer[] = [
     icon: "👩🏾",
     product: "seed",
     requested: 2,
-    opening: "Two farmers at the demonstration want to try the tomato variety they saw. Do we still have two seed packs for them?",
-    context: "This is the final planned seed request of the day.",
-    next: "The doors close and the community reflects on how Amina handled the day.",
+    arrival: "Neema arrives from the model plot with two farmers still discussing the tomato variety they have just seen.",
+    opening: "The demonstration has them excited. These two farmers want to try the tomato variety at home. Do we still have a seed pack for each of them?",
+    context: "The afternoon group is waiting. This is the final seed request before Amina closes the Centre.",
+    next: "The sun drops behind the shop roof. Amina pulls the books closer and listens as the day's choices come back to her.",
     x: 66,
     y: 52,
   },
@@ -197,8 +205,8 @@ const CREDIT_OPTIONS: Array<{
 }> = [
   {
     id: "starter",
-    label: "Starter package",
-    explanation: "Covered by today's payment; no balance remains.",
+    label: "Pay-today starter",
+    explanation: "Fits the notes Rehema brought. No promise follows her home.",
     value: 220000,
     seed: 2,
     fertilizer: 1,
@@ -206,8 +214,8 @@ const CREDIT_OPTIONS: Array<{
   },
   {
     id: "staged",
-    label: "Staged package",
-    explanation: "Useful now, with a smaller written balance for later.",
+    label: "Two-step growing package",
+    explanation: "Enough to begin now, with one smaller promise written for harvest time.",
     value: 480000,
     seed: 3,
     fertilizer: 2,
@@ -215,8 +223,8 @@ const CREDIT_OPTIONS: Array<{
   },
   {
     id: "large",
-    label: "Large package",
-    explanation: "More inputs now, but the Centre carries more risk.",
+    label: "Big harvest bet",
+    explanation: "A fuller cart today—and a much heavier promise for both women to carry.",
     value: 700000,
     seed: 4,
     fertilizer: 3,
@@ -226,16 +234,16 @@ const CREDIT_OPTIONS: Array<{
 
 const NOTEBOOK: Record<string, { title: string; copy: string }> = {
   starting: {
-    title: "One shelf serves many farmers",
-    copy: "A sale can bring cash now while reducing what remains for the next customer. Known commitments make that trade-off easier to judge.",
+    title: "An empty space has a memory",
+    copy: "Rashidi's cash may land in the tin now, but every packet under his arm leaves a space that Rehema can see later.",
   },
   credit: {
-    title: "Good credit has boundaries",
-    copy: "Past repayment, buyer information, package size, a written balance, and clear dates help both the farmer and the Centre.",
+    title: "A promise needs a shape",
+    copy: "An old repayment, a known buyer, a package both sides can carry, and a date in ink turn 'later' into something Rehema and Amina can trust.",
   },
   advice: {
-    title: "Trust may require slowing down",
-    copy: "Observation, safe products, and a useful referral can protect a farmer when the cause of a crop problem is uncertain.",
+    title: "Sometimes the honest answer is 'let me check'",
+    copy: "A closer look, a safe product, or a warm introduction can protect Juma better than a confident guess—and the clock still keeps ticking.",
   },
 };
 
@@ -286,6 +294,7 @@ export default function Home() {
   const [unlockedNotes, setUnlockedNotes] = useState<string[]>(["starting"]);
   const [flags, setFlags] = useState<StoryFlags>(INITIAL_FLAGS);
   const [impact, setImpact] = useState<Impact | null>(null);
+  const [impactStep, setImpactStep] = useState<0 | 1 | 2>(0);
   const [coachReady, setCoachReady] = useState(false);
   const [coachExpanded, setCoachExpanded] = useState(true);
   const [bookEntries, setBookEntries] = useState<BookEntry[]>([]);
@@ -319,36 +328,36 @@ export default function Home() {
   const guidanceFor = (customer: Customer): CoachGuidance => {
     if (customer.id === "rashidi-sale") {
       return {
-        lesson: "BLF · Inventory Recordkeeping + Cash Ledger",
-        know: `${inventory.seed} seed packs are on the shelf. Rashidi requests 5, and Rehema may need 4 later.`,
-        consider: "Balance stock on hand, known customer demand, and the fact that no supplier delivery will arrive today.",
-        record: "A cash sale needs a receipt, cash-ledger entry, and a reduction on the seed inventory card.",
+        lesson: "From your BLF training · Stock and cash books",
+        know: `Count the shelf: ${inventory.seed} seed packs. Rashidi wants 5, and Rehema may return for as many as 4.`,
+        consider: "The cash on the counter is real, but so is the next farmer's need. No truck is coming to rescue an empty shelf.",
+        record: "If packs and cash cross the counter, leave Rashidi a receipt, put the money in the green cash book, and mark the blue stock card.",
       };
     }
     if (customer.kind === "credit") {
       return {
-        lesson: "BLF · Credit for Customers",
-        know: `Rehema can pay ${formatCash(220000)} today. The rest of the selected package becomes customer credit.`,
-        consider: "Check repayment history and buyer evidence; keep the package, balance, and due dates manageable and written.",
-        record: "Record the deposit as cash in, products released on inventory cards, and any unpaid balance in the customer credit ledger.",
+        lesson: "From your BLF training · Credit for customers",
+        know: `The ${formatCash(220000)} on the counter is cash. Anything beyond it is a promise from Rehema's next harvest.`,
+        consider: "A promise feels safer when you know the repayment history, confirm the buyer, and write dates both people can understand.",
+        record: "Money received goes in the green cash book. Products leaving go on blue stock cards. The unpaid promise belongs in Rehema's brown credit book.",
       };
     }
     if (customer.kind === "advice") {
       const remaining = Math.max(0, DEMO_DEADLINE - minutes);
       return {
-        lesson: "BLF · Managing Risk + Customer Care",
-        know: `${remaining} minutes remain before the 3:00 PM demonstration. The cause of the leaf spots and the seller's product are not confirmed.`,
-        consider: "Identify, assess, and reduce the highest risk. More evidence protects Juma, but every check uses preparation time.",
-        record: "A sale changes cash and stock; an investigation cost changes cash and expenses; a referral creates no cash transaction.",
+        lesson: "From your BLF training · Risk and customer care",
+        know: `The wall clock leaves ${remaining} minutes before the demonstration. The leaf spots—and the travelling seller's bottle—still hold unanswered questions.`,
+        consider: "Ask which mistake could hurt Juma most. Each useful check lowers uncertainty, but the farmers at the model plot will not stop their clocks.",
+        record: "A sale moves cash and a bottle. Paying for a proper check creates an expense. A referral moves neither, but Amina should remember the follow-up.",
       };
     }
     return {
-      lesson: "BLF · Inventory Reconciliation + Customer Care",
-      know: `${inventory.seed} seed packs remain${demoLateMinutes ? `, and the demonstration began ${demoLateMinutes} minutes before Amina arrived` : ", and Amina reached the demonstration on time"}.`,
-      consider: "Compare the physical shelf with the inventory card, then explain clearly what the Centre can fulfil.",
+      lesson: "From your BLF training · Closing stock and customer care",
+      know: `Run a hand along the shelf: ${inventory.seed} seed packs remain${demoLateMinutes ? `, and the group has already waited ${demoLateMinutes} minutes` : ", with the demonstration starting on time"}.`,
+      consider: "Let the physical shelf—not hope—shape the answer. A clear explanation can protect a relationship even when stock is short.",
       record: inventory.seed > 0
-        ? "A final cash sale needs a receipt, cash-ledger entry, and inventory-card reduction before closing the books."
-        : "If no cash or stock moves, do not alter the cash or inventory ledgers; note the unfilled request for follow-up.",
+        ? "Before closing, leave a receipt, add the cash to the green book, and make the last mark on the blue seed card."
+        : "An empty shelf creates no cash entry. Put the farmers' names in the pocket follow-up book so the Centre can call when seed returns.",
     };
   };
 
@@ -396,7 +405,7 @@ export default function Home() {
       setMistakenEntryIds((current) =>
         current.includes(pendingBookEntry.id) ? current : [...current, pendingBookEntry.id],
       );
-      setBookkeepingFeedback(`Not this one. ${pendingBookEntry.lesson}`);
+      setBookkeepingFeedback(`Coach Zawadi leans over the desk: “${pendingBookEntry.lesson}”`);
       playTone(360, 0.09);
       return;
     }
@@ -404,7 +413,8 @@ export default function Home() {
       current.some((entry) => entry.id === pendingBookEntry.id) ? current : [...current, pendingBookEntry],
     );
     setBookkeepingIndex((current) => current + 1);
-    setBookkeepingFeedback(`Recorded correctly in the ${book}.`);
+    const bookName = BOOKS.find((item) => item.id === book)?.short ?? book;
+    setBookkeepingFeedback(`Stamp! The ${bookName.toLowerCase()} now tells the same story as the counter.`);
     playTone(880, 0.08);
   };
 
@@ -448,6 +458,7 @@ export default function Home() {
     setPlayer(START_POSITION);
     setBookkeepingIndex(0);
     setBookkeepingFeedback("");
+    setImpactStep(0);
     setImpact(nextImpact);
   };
 
@@ -473,10 +484,32 @@ export default function Home() {
 
     const summary =
       quantity === customer.requested
-        ? `${customer.name} receives the full request.`
+        ? `${quantity} seed packs leave the wooden shelf, and the cash tin grows heavier.`
         : quantity === 0
-          ? `${customer.name} leaves without seed.`
-          : `${customer.name} accepts ${quantity} of the ${customer.requested} requested packs.`;
+          ? `No seed or cash changes hands. The unfilled request still belongs somewhere Amina can find it later.`
+          : `${quantity} of the ${customer.requested} requested packs cross the counter. The rest remain a conversation for another day.`;
+    const reactionText = customer.id === "rashidi-sale"
+      ? quantity === customer.requested
+        ? "Asante! I will tie these to the bicycle and go straight to the nursery."
+        : quantity === 0
+          ? "I understand. Please send word when seed comes—I do not want to miss the rain."
+          : `I can begin with ${quantity}. Let me adjust the nursery beds before the clouds return.`
+      : quantity === customer.requested
+        ? "Perfect! The two farmers are still by the tomato bed. I will take these to them now."
+        : quantity === 0
+          ? "Ah, the shelf is empty. I will explain how today's earlier choices used the seed."
+          : `One pack is still useful. I will ask the farmers to share what they learn.`;
+    const impactTitle = customer.id === "rashidi-sale"
+      ? quantity === customer.requested
+        ? "Rashidi grins and checks the packets twice"
+        : quantity === 0
+          ? "Rashidi folds the notes back into his pocket"
+          : "Rashidi redraws his nursery plan on the counter"
+      : quantity === customer.requested
+        ? "Neema hurries the packs back to the model plot"
+        : quantity === 0
+          ? "Neema looks from the empty shelf to the waiting group"
+          : "Neema carries one last packet into the afternoon light";
     const transactionTime = formatTime(minutes + timeCost);
     const bookkeeping: BookEntry[] = quantity > 0
       ? [
@@ -487,7 +520,7 @@ export default function Home() {
             source: "Customer receipt",
             description: `Cash sale · ${customer.name}`,
             value: `+${formatCash(revenue)}`,
-            lesson: "Actual cash came into the business, so it belongs in the cash ledger.",
+            lesson: "Follow the notes: real cash entered the tin, so this slip belongs in the green cash book.",
           },
           {
             id: `${customer.id}-stock`,
@@ -496,7 +529,7 @@ export default function Home() {
             source: "Stock issue",
             description: `${PRODUCTS[customer.product].shortLabel} released · ${customer.name}`,
             value: `−${quantity} ${quantity === 1 ? "unit" : "units"}`,
-            lesson: "Products physically left the shelf, so reduce the product's inventory card.",
+            lesson: "Look at the gap on the shelf. Packets left the shop, so make the same gap on the blue stock card.",
           },
         ]
       : [
@@ -507,20 +540,21 @@ export default function Home() {
             source: "Unfilled request note",
             description: `${customer.name} · request not fulfilled`,
             value: "No cash transaction",
-            lesson: "No cash or stock moved. Note the unmet need for follow-up without changing the cash ledger.",
+            lesson: "The cash tin and shelf did not move. Keep the person's name in the pocket follow-up book instead.",
           },
         ];
 
     finishEncounter(customer, {
-      title: "The shelf changes immediately",
+      title: impactTitle,
       summary,
+      reaction: { speaker: customer.name, icon: customer.icon, text: reactionText },
       next: customer.next,
       final: customer.id === CUSTOMERS.at(-1)?.id,
       changes: [
         { icon: "🌱", label: `${PRODUCTS[customer.product].shortLabel} on shelf`, before: `${beforeStock}`, after: `${afterStock}`, tone: afterStock < beforeStock ? "negative" : "neutral" },
-        { icon: "🪙", label: "Centre cash", before: formatCashImpact(beforeCash), after: formatCashImpact(beforeCash + revenue), tone: revenue > 0 ? "positive" : "neutral" },
-        { icon: "🕒", label: "Time", before: formatTime(minutes), after: formatTime(minutes + timeCost), tone: "neutral" },
-        { icon: "💚", label: "Farmer trust", before: `${beforeTrust}%`, after: `${Math.max(0, Math.min(100, beforeTrust + trustChange))}%`, tone: trustChange > 0 ? "positive" : trustChange < 0 ? "negative" : "neutral" },
+        { icon: "🪙", label: "Cash in the tin", before: formatCashImpact(beforeCash), after: formatCashImpact(beforeCash + revenue), tone: revenue > 0 ? "positive" : "neutral" },
+        { icon: "🕒", label: "Wall clock", before: formatTime(minutes), after: formatTime(minutes + timeCost), tone: "neutral" },
+        { icon: "💚", label: `${customer.name}'s confidence`, before: `${beforeTrust}%`, after: `${Math.max(0, Math.min(100, beforeTrust + trustChange))}%`, tone: trustChange > 0 ? "positive" : trustChange < 0 ? "negative" : "neutral" },
       ],
       bookkeeping,
     });
@@ -561,7 +595,7 @@ export default function Home() {
         source: "Part-payment receipt",
         description: "Deposit received · Mama Rehema",
         value: `+${formatCash(creditDeposit)}`,
-        lesson: "Only the money received today is cash inflow. The unpaid amount does not enter the cash ledger yet.",
+        lesson: "Only the notes Rehema placed on the counter belong in today's green cash book. Her future promise is not cash yet.",
       },
       {
         id: "rehema-credit-stock",
@@ -570,7 +604,7 @@ export default function Home() {
         source: "Signed stock release",
         description: `Package issued · ${stockDescription}`,
         value: `−${option.seed + option.fertilizer + option.drip} units`,
-        lesson: "The full package leaves physical stock today, even though some payment may arrive later.",
+        lesson: "Every item is leaving today, even if some money comes later. The blue stock cards should show the whole bundle.",
       },
       ...(creditBalance > 0
         ? [{
@@ -580,26 +614,36 @@ export default function Home() {
             source: "Written credit agreement",
             description: "Outstanding balance · Mama Rehema",
             value: formatCash(creditBalance),
-            lesson: "Customer credit is recorded in the credit ledger until it is repaid; it is not cash inflow today.",
+            lesson: "Rehema carries this promise home. Keep its twin in the brown credit book until she pays it.",
           }]
         : []),
     ];
+    const reactionText = creditBalance === 0
+      ? "This is small enough for today, and I go home owing nothing. That lets me sleep well."
+      : structured
+        ? `The ${formatCash(creditBalance)} balance matches my buyer's dates. I will keep this page beside my farm records.`
+        : "That is a large promise to carry in my head. Please write every date clearly so neither of us remembers it differently.";
 
     finishEncounter(customer, {
-      title: "The package affects stock and the ledger",
+      title: creditBalance === 0
+        ? "Rehema closes the notebook with a satisfied nod"
+        : structured
+          ? "Rehema traces each repayment date with her finger"
+          : "Rehema pauses before putting the agreement away",
       summary:
         creditBalance === 0
-          ? "Rehema leaves with a smaller package and no debt."
+          ? "A smaller bundle leaves the shelf, fully covered by the money on the counter."
           : structured
-            ? "Amina records a manageable package, buyer, balance, and repayment dates."
-            : "Rehema receives the package, but the Centre carries an uncertain balance.",
+            ? "The package, today's deposit, the buyer, and the remaining balance now tell one clear story."
+            : "The larger package helps today, but the promise sitting in Amina's book feels less certain.",
+      reaction: { speaker: customer.name, icon: customer.icon, text: reactionText },
       next: customer.next,
       final: false,
       changes: [
         { icon: "🌱", label: "Seed on shelf", before: `${inventory.seed}`, after: `${inventory.seed - option.seed}`, tone: "negative" },
-        { icon: "🪙", label: "Cash received today", before: formatCashImpact(beforeCash), after: formatCashImpact(beforeCash + creditDeposit), tone: "positive" },
-        { icon: "📒", label: "Credit still owed", before: formatCash(beforeExposure), after: formatCash(beforeExposure + creditBalance), tone: creditBalance > 0 ? "negative" : "neutral" },
-        { icon: "🕒", label: "Time", before: formatTime(minutes), after: formatTime(minutes + creditTimeCost), tone: "neutral" },
+        { icon: "🪙", label: "Cash in the tin", before: formatCashImpact(beforeCash), after: formatCashImpact(beforeCash + creditDeposit), tone: "positive" },
+        { icon: "📒", label: "Rehema still owes", before: formatCash(beforeExposure), after: formatCash(beforeExposure + creditBalance), tone: creditBalance > 0 ? "negative" : "neutral" },
+        { icon: "🕒", label: "Wall clock", before: formatTime(minutes), after: formatTime(minutes + creditTimeCost), tone: "neutral" },
       ],
       bookkeeping,
     });
@@ -635,12 +679,12 @@ export default function Home() {
 
     const summary =
       choice === "verify"
-        ? "Amina delays the sale and gathers evidence before recommending anything."
+        ? "The bottle stays on the shelf while Amina pays for a closer look at the leaf."
         : choice === "sell"
-          ? "Amina makes a quick sale before confirming what caused the spots."
+          ? "A bottle leaves the shelf before anyone confirms what made the spots."
           : adviceChecks.consultant
-            ? "Amina sends Juma's photos directly to the BLF agronomist for follow-up."
-            : "Amina tells Juma to seek help elsewhere without arranging the connection.";
+            ? "Juma leaves with the agronomist already expecting his photos."
+            : "Juma leaves with a name, but nobody has made the introduction for him.";
     const deadlineResult = lateMinutes > 0
       ? `${lateMinutes} ${lateMinutes === 1 ? "minute" : "minutes"} late`
       : `${DEMO_DEADLINE - finishTime} minutes early`;
@@ -654,7 +698,7 @@ export default function Home() {
             source: "Customer receipt",
             description: "Crop-care cash sale · Juma",
             value: `+${formatCash(PRODUCTS.cropCare.price)}`,
-            lesson: "Juma paid cash, so record the inflow in the cash ledger and issue a receipt.",
+            lesson: "Juma's notes are now in the tin. The receipt belongs beside that movement in the green cash book.",
           },
           {
             id: "juma-advice-stock",
@@ -663,7 +707,7 @@ export default function Home() {
             source: "Stock issue",
             description: "Crop-care product released · Juma",
             value: "−1 unit",
-            lesson: "A product left the shelf, so the crop-care inventory card must also decrease.",
+            lesson: "A bottle left an empty space behind. The blue stock card needs the same story.",
           },
         ]
       : choice === "verify"
@@ -675,7 +719,7 @@ export default function Home() {
               source: "Assessment payment slip",
               description: "Crop assessment cash paid",
               value: `−${formatCash(40000)}`,
-              lesson: "Cash left the business, so record the outflow in the cash ledger.",
+              lesson: "This time notes left the tin. The green cash book follows money in both directions.",
             },
             {
               id: "juma-advice-expense",
@@ -684,7 +728,7 @@ export default function Home() {
               source: "Assessment receipt",
               description: "Crop assessment service · Juma",
               value: formatCash(40000),
-              lesson: "The assessment is a day-to-day business cost, so classify it in the expense ledger too.",
+              lesson: "The assessment helped today's business and used today's money. Its receipt belongs in the orange expense book.",
             },
           ]
         : [
@@ -695,22 +739,36 @@ export default function Home() {
               source: "Farmer service note",
               description: adviceChecks.consultant ? "Warm agronomist referral · Juma" : "Referral advised · Juma",
               value: "No cash transaction",
-              lesson: "No money or product changed hands. Track the promised follow-up without changing the cash ledger.",
+              lesson: "No notes or bottle crossed the counter. Write the promised handover in the pocket follow-up book.",
             },
           ];
+    const reactionText = choice === "verify"
+      ? `Good. I would rather wait for the right answer than spray the wrong thing.${lateMinutes ? " I can hear the demo group already—go, Amina!" : ""}`
+      : choice === "sell"
+        ? "The label is not very clear... but if this is what you recommend, I will take it."
+        : adviceChecks.consultant
+          ? "You already told the agronomist my name? Asante—now I know she is expecting me."
+          : "All right... where exactly should I find her, and will she know why I have come?";
 
     finishEncounter(customer, {
-      title: lateMinutes > 0 ? "The safer work has a deadline cost" : "The decision protects the demonstration time",
+      title: choice === "verify"
+        ? "Juma wraps the leaf again instead of reaching for a bottle"
+        : choice === "sell"
+          ? "Juma turns the bottle slowly, searching for the missing details"
+          : adviceChecks.consultant
+            ? "Juma saves the agronomist's number in his phone"
+            : "Juma leaves with a name, but no introduction",
       summary: `${summary} Amina finishes ${deadlineResult}.`,
+      reaction: { speaker: customer.name, icon: customer.icon, text: reactionText },
       next: lateMinutes > 0
         ? `The model-farm demonstration started ${lateMinutes} minutes ago. Neema is already with the waiting group.`
         : customer.next,
       final: false,
       changes: [
-        { icon: "🪙", label: "Centre cash", before: formatCashImpact(beforeCash), after: formatCashImpact(Math.max(0, beforeCash + cashChange)), tone: cashChange > 0 ? "positive" : cashChange < 0 ? "negative" : "neutral" },
-        { icon: "🧪", label: "Crop-care stock", before: `${beforeCropCare}`, after: `${Math.max(0, beforeCropCare + cropCareChange)}`, tone: cropCareChange < 0 ? "negative" : "neutral" },
-        { icon: "🕒", label: "Time", before: formatTime(minutes), after: formatTime(finishTime), tone: lateMinutes > 0 ? "negative" : "neutral" },
-        { icon: "⏰", label: "3:00 PM demo", before: `${Math.max(0, DEMO_DEADLINE - minutes)} min left`, after: deadlineResult, tone: lateMinutes > 0 ? "negative" : "positive" },
+        { icon: "🪙", label: "Cash in the tin", before: formatCashImpact(beforeCash), after: formatCashImpact(Math.max(0, beforeCash + cashChange)), tone: cashChange > 0 ? "positive" : cashChange < 0 ? "negative" : "neutral" },
+        { icon: "🧪", label: "Bottles on the shelf", before: `${beforeCropCare}`, after: `${Math.max(0, beforeCropCare + cropCareChange)}`, tone: cropCareChange < 0 ? "negative" : "neutral" },
+        { icon: "🕒", label: "Wall clock", before: formatTime(minutes), after: formatTime(finishTime), tone: lateMinutes > 0 ? "negative" : "neutral" },
+        { icon: "⏰", label: "Farmers at the demo", before: `${Math.max(0, DEMO_DEADLINE - minutes)} min left`, after: deadlineResult, tone: lateMinutes > 0 ? "negative" : "positive" },
       ],
       bookkeeping,
     });
@@ -733,6 +791,7 @@ export default function Home() {
     }
     setMetrics((current) => applyEffects(current, { trust: trustChange, readiness: readinessChange }));
     setImpact(null);
+    setImpactStep(0);
     setPhase("ending");
     playTone(trustChange >= 0 ? 860 : 470, 0.15);
   };
@@ -748,6 +807,7 @@ export default function Home() {
     if (nextCustomer?.id === "neema-finale") setMinutes((current) => Math.max(current, 900));
     setToast(impact.next);
     setImpact(null);
+    setImpactStep(0);
     playTone(700, 0.07);
   };
 
@@ -769,6 +829,7 @@ export default function Home() {
     setUnlockedNotes(["starting"]);
     setFlags(INITIAL_FLAGS);
     setImpact(null);
+    setImpactStep(0);
     setCoachReady(false);
     setCoachExpanded(true);
     setBookEntries([]);
@@ -798,15 +859,15 @@ export default function Home() {
   const timeScore = demoLateMinutes === 0 ? 15 : demoLateMinutes <= 5 ? 12 : demoLateMinutes <= 10 ? 9 : demoLateMinutes <= 20 ? 5 : 0;
   const balancedScore = farmerScore + bookkeepingScore + stewardshipScore + riskScore + timeScore;
   const scoreGrade = balancedScore >= 90
-    ? "Trusted Centre Leader"
+    ? "Kijani's Trusted Hand"
     : balancedScore >= 75
-      ? "Strong Market-Day Manager"
+      ? "A Steady Day at the Centre"
       : balancedScore >= 60
-        ? "Developing Agribusiness Retailer"
-        : "Another market day recommended";
+        ? "Finding Amina's Rhythm"
+        : "Ready for Another Saturday";
 
   const shareScore = async () => {
-    const text = `Kijani Centre · ${balancedScore}/100 · ${scoreGrade}\nFarmer value ${farmerScore}/20 · Bookkeeping ${bookkeepingScore}/25 · Stewardship ${stewardshipScore}/20 · Risk ${riskScore}/20 · Time ${timeScore}/15`;
+    const text = `My Saturday at Kijani Centre · ${balancedScore}/100 · ${scoreGrade}\nFarmers helped ${farmerScore}/20 · Books kept ${bookkeepingScore}/25 · Shop kept steady ${stewardshipScore}/20 · Risks handled ${riskScore}/20 · Made the demo ${timeScore}/15`;
     try {
       if (navigator.share) await navigator.share({ title: "My Kijani Centre market day", text });
       else await navigator.clipboard.writeText(text);
@@ -818,23 +879,23 @@ export default function Home() {
 
   const creditOutcome =
     flags.creditOption === "starter"
-      ? "Rehema leaves with a smaller package fully covered by her payment. She knows exactly what she can use now."
+      ? "Rehema starts with a smaller plot and no balance following her home. She says she will return with harvest news."
       : flags.creditStructured
-        ? "Rehema's buyer confirms the staged dates. Both Rehema and Amina leave with a clear written plan."
+        ? "When the buyer calls again, Rehema opens the same dated page that Amina has. Neither has to argue from memory."
         : flags.creditOption
-          ? "Rehema receives useful inputs, but a large or weakly checked balance remains in Amina's ledger."
+          ? "The inputs are already in Rehema's field, but the large promise in Amina's book still feels heavier than the deposit."
           : "Rehema's request was not completed.";
 
   const adviceOutcome =
     flags.adviceChoice === "verify"
       ? flags.adviceEvidence >= 2
-        ? "The agronomist's reply points to nutrient stress, not the disease Juma feared. He avoids an unnecessary pesticide."
-        : "Juma appreciates that Amina did not guess, although the final answer still requires follow-up."
+        ? "The agronomist's message points to nutrient stress, not the disease Juma feared. He laughs with relief and leaves the pesticide unopened."
+        : "Juma is glad Amina did not guess. He keeps the leaf wrapped safely while they wait for the final answer."
       : flags.adviceChoice === "sell"
-        ? "At the demonstration, Juma learns the quick pesticide sale did not match the likely problem. Other farmers hear the story."
-        : flags.adviceChoice === "refer" && flags.adviceEvidence >= 1
-          ? "The warm referral reaches Juma before the demonstration and gives him a practical next step."
-          : "Juma was protected from an uncertain sale, but the referral gave him no direct path to help.";
+        ? "At the model plot, Juma hears that the bottle may not match the problem. He goes quiet, and the farmers beside him notice."
+      : flags.adviceChoice === "refer" && flags.adviceEvidence >= 1
+          ? "The agronomist greets Juma by name. He smiles—the referral feels like a real handover, not directions shouted from a doorway."
+          : "Juma avoids an uncertain sale, but spends the afternoon asking which agronomist Amina meant.";
 
   return (
     <main className="game-page">
@@ -850,19 +911,19 @@ export default function Home() {
                 <span className="tiny-leaf" aria-hidden="true">🌿</span>
                 <p className="game-kicker">Better Life Farming · Tanzania</p>
                 <h1>Kijani Centre</h1>
-                <p className="game-subtitle">Live one connected market day. Serve farmers, manage limited stock and credit, give responsible advice, and see every decision return later.</p>
+                <p className="game-subtitle">Lift the shutters, meet four neighbours, and watch one small choice travel through the whole day.</p>
                 <div className="mission-preview">
-                  <strong>Today&apos;s goal · build a balanced Centre</strong>
-                  <p>Serve farmers responsibly, keep accurate books, manage stock and risk, and reach the 3:00 PM demonstration.</p>
-                  <div><span>🤝 Farmer value · 20</span><span>📒 Books · 25</span><span>📦 Stewardship · 20</span><span>🛡️ Risk · 20</span><span>⏰ Time · 15</span></div>
+                  <strong>Can Amina finish a day the whole community trusts?</strong>
+                  <p>Help the people at the counter, keep the shop steady, write down what really happened, and reach the model plot by three.</p>
+                  <div><span>🤝 Farmers helped · 20</span><span>📒 Books kept · 25</span><span>📦 Shop kept steady · 20</span><span>🛡️ Risks handled · 20</span><span>⏰ Made the demo · 15</span></div>
                 </div>
                 <div className="title-details">
-                  <span>🗓️ One market day</span>
-                  <span>👥 Four connected encounters</span>
-                  <span>⚖️ Visible trade-offs</span>
+                  <span>🗓️ One Saturday</span>
+                  <span>👥 Four neighbours</span>
+                  <span>↪ Every choice returns</span>
                 </div>
-                <button className="primary-button start-button" type="button" onClick={startDay}>Begin market day</button>
-                <p className="small-note">There is no perfect route. Try to keep the Centre useful, solvent, and trusted.</p>
+                <button className="primary-button start-button" type="button" onClick={startDay}>Lift the shutters</button>
+                <p className="small-note">Nobody gets everything. Listen well, write it down, and keep an eye on the wall clock.</p>
               </div>
             </div>
           )}
@@ -890,7 +951,7 @@ export default function Home() {
               <div className="morning-card pixel-panel">
                 <div className="morning-heading">
                   <span className="morning-icon" aria-hidden="true">🌅</span>
-                  <div><span className="eyebrow">7:30 AM · Before opening</span><h1>Vuli market day</h1><p>One day · four connected challenges</p></div>
+                  <div><span className="eyebrow">7:30 AM · Before opening</span><h1>A Saturday at Kijani Centre</h1><p>The road is waking up. So is the shop.</p></div>
                 </div>
                 <div className="story-stage morning-story">
                   <div className="story-speaker"><span aria-hidden="true">{BRIEFING[briefingStep].icon}</span><strong>{BRIEFING[briefingStep].speaker}</strong></div>
@@ -909,16 +970,16 @@ export default function Home() {
           {phase === "shop" && (
             <>
               <aside className="day-card pixel-panel">
-                <span className="eyebrow">Today&apos;s story</span>
-                <h1>{currentCustomer ? `Chapter ${completedIds.length + 1} of ${CUSTOMERS.length}` : "Market day complete"}</h1>
-                <p>{currentCustomer ? "One situation at a time. Listen first, then decide." : "Every planned encounter has been handled."}</p>
+                <span className="eyebrow">At the shop door</span>
+                <h1>{currentCustomer ? `${currentCustomer.name} is here` : "The road is quiet again"}</h1>
+                <p>{currentCustomer ? "Open the conversation. The rest of the Centre can wait." : "Amina can finally bring the books together."}</p>
 
                 {currentCustomer && (
                   <div className="visitor-list current-visitor">
                     <button type="button" onClick={() => openCustomer(currentCustomer)}>
                       <span>{currentCustomer.icon}</span>
-                      <span><strong>{currentCustomer.name}</strong><small>{currentCustomer.kind === "sale" ? "Purchase request" : currentCustomer.kind === "credit" ? "Credit request" : "Crop advice"}</small></span>
-                      <b>Talk →</b>
+                      <span><strong>{currentCustomer.name}</strong><small>{currentCustomer.id === "rashidi-sale" ? "Cash folded on the counter" : currentCustomer.id === "neema-finale" ? "Two farmers at the model plot" : currentCustomer.kind === "credit" ? "Farm notebook in hand" : "A spotted tomato leaf"}</small></span>
+                      <b>Welcome →</b>
                     </button>
                   </div>
                 )}
@@ -939,7 +1000,7 @@ export default function Home() {
                   <button type="button" onClick={() => setToolPanel("inventory")}><span>📦</span><strong>Stockroom</strong><small>{totalInventory} units</small></button>
                   <button type="button" onClick={() => setToolPanel("ledger")}><span>📒</span><strong>Today&apos;s books</strong><small>{bookEntries.length} entries</small></button>
                   <button type="button" onClick={() => setToolPanel("notebook")}><span>📖</span><strong>Notebook</strong><small>{unlockedNotes.length} notes</small></button>
-                  <button type="button" onClick={() => setToolPanel("coach")}><span>📱</span><strong>ALP Coach</strong><small>Current lesson</small></button>
+                  <button type="button" onClick={() => setToolPanel("coach")}><span>🧑🏾‍🏫</span><strong>Coach Zawadi</strong><small>ALP Coach</small></button>
                 </div>
               </aside>
 
@@ -965,7 +1026,8 @@ export default function Home() {
             <div className="interaction-scrim">
               <div className="interaction-sheet pixel-panel" role="dialog" aria-modal="true" aria-label={`Conversation with ${selectedCustomer.name}`}>
                 <button className="sheet-close" type="button" aria-label="Return to the shop" onClick={() => setSelectedCustomer(null)}>×</button>
-                <div className="conversation-heading"><span>{selectedCustomer.icon}</span><div><span className="eyebrow">At the counter · {formatTime(minutes)}</span><h2>{selectedCustomer.name}</h2><p>{customerLineIndex < customerLines.length ? "Listen to the request before deciding what to do." : "Now choose how Amina will respond."}</p></div></div>
+                <div className="conversation-heading"><span>{selectedCustomer.icon}</span><div><span className="eyebrow">At the counter · {formatTime(minutes)}</span><h2>{selectedCustomer.name}</h2><p>{customerLineIndex < customerLines.length ? "First, hear them out." : "The counter is quiet. Amina's choice comes next."}</p></div></div>
+                <p className="scene-setting">{selectedCustomer.arrival}</p>
 
                 {customerLineIndex < customerLines.length ? (
                   <div className="story-stage customer-story">
@@ -982,45 +1044,45 @@ export default function Home() {
                   <>
                     {selectedGuidance && (
                       <section className={`decision-coach ${coachReady && !coachExpanded ? "collapsed" : ""}`} aria-label="ALP Coach decision guide">
-                        <div className="coach-heading"><span>📱</span><div><small>{selectedGuidance.lesson}</small><strong>ALP Coach · before you decide</strong></div></div>
+                        <div className="coach-heading"><span>🧑🏾‍🏫</span><div><small>{selectedGuidance.lesson}</small><strong>Coach Zawadi has a thought</strong></div></div>
                         {coachExpanded ? (
                           <>
                             <div className="coach-checks">
-                              <article><b>1</b><div><strong>What you know</strong><p>{selectedGuidance.know}</p></div></article>
-                              <article><b>2</b><div><strong>What to consider</strong><p>{selectedGuidance.consider}</p></div></article>
-                              <article><b>3</b><div><strong>What to record</strong><p>{selectedGuidance.record}</p></div></article>
+                              <article><b>👀</b><div><strong>Look at the counter</strong><p>{selectedGuidance.know}</p></div></article>
+                              <article><b>↪</b><div><strong>Think one step ahead</strong><p>{selectedGuidance.consider}</p></div></article>
+                              <article><b>✎</b><div><strong>Leave a paper trail</strong><p>{selectedGuidance.record}</p></div></article>
                             </div>
-                            <button className="coach-ready-button" type="button" onClick={() => { setCoachReady(true); setCoachExpanded(false); playTone(790, 0.08); }}>{coachReady ? "Hide hints and continue" : "I understand · show my choices →"}</button>
+                            <button className="coach-ready-button" type="button" onClick={() => { setCoachReady(true); setCoachExpanded(false); playTone(790, 0.08); }}>{coachReady ? "Back to the counter" : "Got it · let me decide →"}</button>
                           </>
                         ) : (
-                          <button className="coach-review-button" type="button" onClick={() => setCoachExpanded(true)}>📱 Review the three decision checks</button>
+                          <button className="coach-review-button" type="button" onClick={() => setCoachExpanded(true)}>🧑🏾‍🏫 Hear Coach Zawadi again</button>
                         )}
                       </section>
                     )}
 
                     {coachReady && selectedCustomer.kind === "sale" && (
                       <div className="sale-builder">
-                        <div className="known-context"><span>📌</span><div><strong>What Amina already knows</strong><p>{selectedCustomer.id === "neema-finale" && demoLateMinutes > 0 ? `Amina reached the demonstration ${demoLateMinutes} minutes late. The waiting group noticed, and this is the final seed request today.` : selectedCustomer.context}</p></div></div>
-                        <div className="stock-snapshot"><span>{PRODUCTS[selectedCustomer.product].icon}</span><div><small>On the shelf now</small><strong>{inventory[selectedCustomer.product]} {PRODUCTS[selectedCustomer.product].shortLabel.toLowerCase()} units</strong></div><div><small>Requested</small><strong>{selectedCustomer.requested}</strong></div></div>
-                        <label htmlFor="sale-quantity">Quantity to sell <strong>{saleQuantity}</strong></label>
+                        <div className="known-context"><span>👀</span><div><strong>Amina glances around the shop</strong><p>{selectedCustomer.id === "neema-finale" && demoLateMinutes > 0 ? `Amina reached the demonstration ${demoLateMinutes} minutes late. The waiting group noticed, and this is the final seed request today.` : selectedCustomer.context}</p></div></div>
+                        <div className="stock-snapshot"><span>{PRODUCTS[selectedCustomer.product].icon}</span><div><small>On the wooden shelf</small><strong>{inventory[selectedCustomer.product]} {PRODUCTS[selectedCustomer.product].shortLabel.toLowerCase()} units</strong></div><div><small>{selectedCustomer.name} asks for</small><strong>{selectedCustomer.requested}</strong></div></div>
+                        <label htmlFor="sale-quantity">Packs Amina puts on the counter <strong>{saleQuantity}</strong></label>
                         <input id="sale-quantity" type="range" min="0" max={Math.min(selectedCustomer.requested, inventory[selectedCustomer.product])} value={saleQuantity} onChange={(event) => setSaleQuantity(Number(event.target.value))} />
                         <div className="live-tradeoff">
-                          <span><small>Cash received</small><strong>+{formatCash(saleQuantity * PRODUCTS[selectedCustomer.product].price)}</strong></span>
-                          <span><small>Stock remaining</small><strong>{inventory[selectedCustomer.product] - saleQuantity}</strong></span>
+                          <span><small>Notes into the cash tin</small><strong>+{formatCash(saleQuantity * PRODUCTS[selectedCustomer.product].price)}</strong></span>
+                          <span><small>Packs left on shelf</small><strong>{inventory[selectedCustomer.product] - saleQuantity}</strong></span>
                           <span className={selectedCustomer.id === "rashidi-sale" && inventory.seed - saleQuantity < 4 ? "warning" : "good"}><small>{selectedCustomer.id === "rashidi-sale" ? "For Rehema later" : "Final shelf result"}</small><strong>{selectedCustomer.id === "rashidi-sale" ? inventory.seed - saleQuantity >= 4 ? "Enough for 4" : `${4 - (inventory.seed - saleQuantity)} short` : `${inventory.seed - saleQuantity} left`}</strong></span>
-                          <span><small>Time after sale</small><strong>{formatTime(minutes + 25)}</strong></span>
+                          <span><small>Wall clock afterwards</small><strong>{formatTime(minutes + 25)}</strong></span>
                         </div>
-                        <button className="primary-button" type="button" onClick={completeSale}>{saleQuantity === selectedCustomer.requested ? "Confirm full sale" : saleQuantity === 0 ? "Explain that no stock can be released" : `Offer ${saleQuantity} packs`}</button>
+                        <button className="primary-button" type="button" onClick={completeSale}>{saleQuantity === selectedCustomer.requested ? `Hand ${selectedCustomer.name} the full request` : saleQuantity === 0 ? "Explain that the shelf is empty" : `Offer ${saleQuantity} packs and explain why`}</button>
                       </div>
                     )}
 
                     {coachReady && selectedCustomer.kind === "credit" && (
                       <div className="credit-builder">
                         <div className="evidence-desk">
-                          <button type="button" className={creditChecks.ledger ? "checked" : ""} onClick={() => setCreditChecks((current) => ({ ...current, ledger: true }))}><span>📒</span><strong>Check repayment record</strong><small>{creditChecks.ledger ? "Two smaller balances were repaid on time." : "+10 minutes"}</small></button>
-                          <button type="button" className={creditChecks.buyer ? "checked" : ""} onClick={() => setCreditChecks((current) => ({ ...current, buyer: true }))}><span>📞</span><strong>Confirm the buyer</strong><small>{creditChecks.buyer ? "The buyer confirms a smaller vegetable order." : "+15 minutes"}</small></button>
+                          <button type="button" className={creditChecks.ledger ? "checked" : ""} onClick={() => setCreditChecks((current) => ({ ...current, ledger: true }))}><span>📒</span><strong>Turn back through Rehema&apos;s old account</strong><small>{creditChecks.ledger ? "✓ Two smaller balances were paid on the promised dates." : "+10 min · read the old entries"}</small></button>
+                          <button type="button" className={creditChecks.buyer ? "checked" : ""} onClick={() => setCreditChecks((current) => ({ ...current, buyer: true }))}><span>📞</span><strong>Call the vegetable buyer</strong><small>{creditChecks.buyer ? "✓ The buyer confirms a smaller order next month." : "+15 min · hear the buyer directly"}</small></button>
                         </div>
-                        <span className="section-label">Choose a package—not a random quantity</span>
+                        <span className="section-label">Build an agreement Rehema can carry home</span>
                         <div className="package-grid simple-packages">
                           {CREDIT_OPTIONS.map((option) => {
                             const feasible = packageIsFeasible(option);
@@ -1028,30 +1090,30 @@ export default function Home() {
                           })}
                         </div>
                         <div className="live-tradeoff">
-                          <span><small>Seed after package</small><strong>{inventory.seed - selectedCreditOption.seed}</strong></span>
-                          <span><small>Paid today</small><strong>+{formatCash(creditDeposit)}</strong></span>
-                          <span className={creditBalance > 300000 ? "warning" : "good"}><small>Credit still owed</small><strong>{formatCash(creditBalance)}</strong></span>
-                          <span><small>Time after checks</small><strong>{formatTime(minutes + creditTimeCost)}</strong></span>
+                          <span><small>Seed left on shelf</small><strong>{inventory.seed - selectedCreditOption.seed}</strong></span>
+                          <span><small>Notes in the cash tin</small><strong>+{formatCash(creditDeposit)}</strong></span>
+                          <span className={creditBalance > 300000 ? "warning" : "good"}><small>Promise written for later</small><strong>{formatCash(creditBalance)}</strong></span>
+                          <span><small>Wall clock afterwards</small><strong>{formatTime(minutes + creditTimeCost)}</strong></span>
                         </div>
-                        <button className="primary-button" type="button" disabled={!packageIsFeasible()} onClick={completeCredit}>Agree, write the balance, and release stock</button>
+                        <button className="primary-button" type="button" disabled={!packageIsFeasible()} onClick={completeCredit}>Write the agreement and pack Rehema&apos;s order</button>
                       </div>
                     )}
 
                     {coachReady && selectedCustomer.kind === "advice" && (
                       <div className="advice-builder">
                         <div className={`deadline-banner ${minutes >= DEMO_DEADLINE ? "late" : minutes >= DEMO_DEADLINE - 20 ? "warning" : ""}`} role="status">
-                          <span>⏰</span><div><strong>Model-farm demonstration · 3:00 PM</strong><p>{minutes < DEMO_DEADLINE ? `${DEMO_DEADLINE - minutes} minutes remain. Every check advances the clock immediately.` : `The group has been waiting for ${minutes - DEMO_DEADLINE} minutes.`}</p></div><b>{formatTime(minutes)}</b>
+                          <span>⏰</span><div><strong>The model-plot group arrives at 3:00 PM</strong><p>{minutes < DEMO_DEADLINE ? `${DEMO_DEADLINE - minutes} minutes remain. Each action below turns the hands of the clock.` : `The group has been waiting for ${minutes - DEMO_DEADLINE} minutes.`}</p></div><b>{formatTime(minutes)}</b>
                         </div>
                         <div className="evidence-desk three">
                           <button type="button" className={adviceChecks.leaf ? "checked" : ""} onClick={() => inspectAdvice("leaf", 10)}><span>🍃</span><strong>Inspect the leaf</strong><small>{adviceChecks.leaf ? "✓ The spots may have more than one cause." : "+10 min · look before deciding"}</small></button>
                           <button type="button" className={adviceChecks.label ? "checked" : ""} onClick={() => inspectAdvice("label", 10)}><span>🧪</span><strong>Read seller&apos;s label</strong><small>{adviceChecks.label ? "✓ Registration and batch details are missing." : "+10 min · check the product"}</small></button>
                           <button type="button" className={adviceChecks.consultant ? "checked" : ""} onClick={() => inspectAdvice("consultant", 20)}><span>📞</span><strong>Call the agronomist</strong><small>{adviceChecks.consultant ? "✓ She asks for photos and replies before the demo." : "+20 min · create a warm referral"}</small></button>
                         </div>
-                        <span className="section-label">Choose what Amina does now</span>
+                        <span className="section-label">Juma is watching. What does Amina do?</span>
                         <div className="advice-actions consequence-actions">
-                          <button type="button" onClick={() => completeAdvice("verify")}><strong>Verify before recommending</strong><small>−TSh 40k · +{adviceTimeCost("verify")} min · {deadlineLabel(minutes + adviceTimeCost("verify"))}</small></button>
-                          <button type="button" disabled={inventory.cropCare < 1} onClick={() => completeAdvice("sell")}><strong>Sell a product now</strong><small>+TSh 160k · +{adviceTimeCost("sell")} min · {deadlineLabel(minutes + adviceTimeCost("sell"))}</small></button>
-                          <button type="button" onClick={() => completeAdvice("refer")}><strong>Refer Juma</strong><small>No sale · +{adviceTimeCost("refer")} min · {deadlineLabel(minutes + adviceTimeCost("refer"))}</small></button>
+                          <button type="button" onClick={() => completeAdvice("verify")}><strong>Keep the leaf for a proper check</strong><small>Costs TSh 40k · takes {adviceTimeCost("verify")} min · {deadlineLabel(minutes + adviceTimeCost("verify"))}</small></button>
+                          <button type="button" disabled={inventory.cropCare < 1} onClick={() => completeAdvice("sell")}><strong>Put a bottle on the counter now</strong><small>Brings TSh 160k · takes {adviceTimeCost("sell")} min · {deadlineLabel(minutes + adviceTimeCost("sell"))}</small></button>
+                          <button type="button" onClick={() => completeAdvice("refer")}><strong>Send Juma to the agronomist</strong><small>No sale · takes {adviceTimeCost("refer")} min · {deadlineLabel(minutes + adviceTimeCost("refer"))}</small></button>
                         </div>
                       </div>
                     )}
@@ -1064,35 +1126,54 @@ export default function Home() {
           {impact && (
             <div className="interaction-scrim impact-scrim">
               <div className="impact-sheet pixel-panel" role="dialog" aria-modal="true" aria-label="Decision impact">
-                <span className="eyebrow">Decision made · what changed?</span>
-                <h2>{impact.title}</h2>
-                <p className="impact-summary">{impact.summary}</p>
-                <div className="impact-grid">
-                  {impact.changes.map((change) => (
-                    <div key={change.label} className={change.tone ?? "neutral"}><span>{change.icon}</span><small>{change.label}</small><div><del>{change.before}</del><b>→</b><strong>{change.after}</strong></div></div>
-                  ))}
-                </div>
-                <section className="bookkeeping-practice" aria-label="Bookkeeping practice">
-                  <div className="bookkeeping-heading"><div><span>📒</span><div><small>BLF bookkeeping procedure</small><strong>Close the loop before continuing</strong></div></div><b>{Math.min(bookkeepingIndex + 1, impact.bookkeeping.length)} / {impact.bookkeeping.length}</b></div>
-                  {pendingBookEntry ? (
-                    <>
-                      <p>Where should Amina record this source document?</p>
-                      <div className="source-document">
-                        <span>{pendingBookEntry.source}</span><strong>{pendingBookEntry.description}</strong><b>{pendingBookEntry.value}</b><small>{pendingBookEntry.time}</small>
-                      </div>
-                      <div className="book-choices">
-                        {BOOKS.map((book) => <button key={book.id} type="button" onClick={() => recordBookEntry(book.id)}><span>{book.icon}</span><strong>{book.short}</strong></button>)}
-                      </div>
-                      {bookkeepingFeedback && <p className={bookkeepingFeedback.startsWith("Not") ? "book-feedback wrong" : "book-feedback"} role="status">📱 {bookkeepingFeedback}</p>}
-                    </>
-                  ) : (
-                    <div className="books-complete"><span>✓</span><div><strong>Books updated</strong><p>The records now agree with what changed in cash, stock, credit, expenses, or follow-up.</p></div></div>
-                  )}
-                </section>
-                {booksComplete && (
+                {impactStep === 0 && (
+                  <div className="reaction-scene">
+                    <span className="eyebrow">Right there at the counter...</span>
+                    <h2>{impact.title}</h2>
+                    <div className="customer-reaction"><span>{impact.reaction.icon}</span><div><strong>{impact.reaction.speaker}</strong><p>“{impact.reaction.text}”</p></div></div>
+                    <button className="primary-button" type="button" onClick={() => { setImpactStep(1); playTone(720, 0.08); }}>Watch the choice travel →</button>
+                  </div>
+                )}
+
+                {impactStep === 1 && (
+                  <div className="consequence-scene">
+                    <span className="eyebrow">Amina looks around the Centre</span>
+                    <h2>One choice has already moved the day</h2>
+                    <p className="impact-summary">{impact.summary}</p>
+                    <div className="impact-grid">
+                      {impact.changes.map((change) => (
+                        <div key={change.label} className={change.tone ?? "neutral"}><span>{change.icon}</span><small>{change.label}</small><div><del>{change.before}</del><b>→</b><strong>{change.after}</strong></div></div>
+                      ))}
+                    </div>
+                    <button className="primary-button paper-button" type="button" onClick={() => { setImpactStep(2); playTone(660, 0.08); }}>The paperwork is still on the counter →</button>
+                  </div>
+                )}
+
+                {impactStep === 2 && (
                   <>
-                    <div className="next-scene"><span>▶</span><p>{impact.next}</p></div>
-                    <button className="primary-button" type="button" onClick={continueAfterImpact}>{impact.final ? "See my Balanced Centre Score →" : "Continue the story →"}</button>
+                    <section className="bookkeeping-practice" aria-label="Bookkeeping practice">
+                      <div className="bookkeeping-heading"><div><span>✎</span><div><small>Amina&apos;s counter</small><strong>One last job before the next neighbour</strong></div></div><b>{Math.min(bookkeepingIndex + 1, impact.bookkeeping.length)} / {impact.bookkeeping.length}</b></div>
+                      {pendingBookEntry ? (
+                        <>
+                          <p>A paper slip is waiting beside the cash tin. Which book should Amina open?</p>
+                          <div className="source-document">
+                            <span>{pendingBookEntry.source}</span><strong>{pendingBookEntry.description}</strong><b>{pendingBookEntry.value}</b><small>{pendingBookEntry.time}</small>
+                          </div>
+                          <div className="book-choices">
+                            {BOOKS.map((book) => <button key={book.id} type="button" onClick={() => recordBookEntry(book.id)}><span>{book.icon}</span><strong>{book.short}</strong></button>)}
+                          </div>
+                          {bookkeepingFeedback && <p className={bookkeepingFeedback.startsWith("Coach") ? "book-feedback wrong" : "book-feedback"} role="status">{bookkeepingFeedback}</p>}
+                        </>
+                      ) : (
+                        <div className="books-complete"><span>✓</span><div><strong>Stamp, close, done.</strong><p>The shelf, cash tin, and books now tell the same story.</p></div></div>
+                      )}
+                    </section>
+                    {booksComplete && (
+                      <>
+                        <div className="next-scene"><span>👣</span><p>{impact.next}</p></div>
+                        <button className="primary-button" type="button" onClick={continueAfterImpact}>{impact.final ? "See how Amina's whole day went →" : "Open the door for the next neighbour →"}</button>
+                      </>
+                    )}
                   </>
                 )}
               </div>
@@ -1104,26 +1185,26 @@ export default function Home() {
               <div className="tool-sheet pixel-panel" role="dialog" aria-modal="true" aria-label={`${toolPanel} panel`}>
                 <button className="sheet-close" type="button" aria-label="Close tool" onClick={() => setToolPanel(null)}>×</button>
 
-                {toolPanel === "inventory" && <><span className="eyebrow">Fixed stock for today</span><h2>What is actually on the shelf?</h2><p className="sheet-intro">No delivery arrives today. These are the items Amina must allocate across the people who visit.</p><div className="inventory-grid">{(Object.keys(PRODUCTS) as ProductKey[]).map((key) => <div key={key}><span>{PRODUCTS[key].icon}</span><strong>{inventory[key]}</strong><small>{PRODUCTS[key].label}</small></div>)}</div></>}
+                {toolPanel === "inventory" && <><span className="eyebrow">Shelf and back room</span><h2>What can Amina actually reach for?</h2><p className="sheet-intro">The supplier&apos;s truck is not coming. When a packet leaves this shelf, the gap stays visible for the rest of the day.</p><div className="inventory-grid">{(Object.keys(PRODUCTS) as ProductKey[]).map((key) => <div key={key}><span>{PRODUCTS[key].icon}</span><strong>{inventory[key]}</strong><small>{PRODUCTS[key].label}</small></div>)}</div></>}
 
                 {toolPanel === "ledger" && (
                   <>
-                    <span className="eyebrow">Today&apos;s bookkeeping</span><h2>Do the books agree with the Centre?</h2>
-                    <div className="books-summary"><div><span>🪙</span><small>Cash balance</small><strong>{formatCash(metrics.cash)}</strong></div><div><span>📦</span><small>Stock on hand</small><strong>{totalInventory} units</strong></div><div><span>🤝</span><small>Credit owed</small><strong>{formatCash(ledgerExposure)}</strong></div><div><span>✓</span><small>Entries posted</small><strong>{bookEntries.length}</strong></div></div>
-                    {bookEntries.length === 0 ? <p className="empty-state">Opening cash and stock balances are ready. Completed decisions will create source documents to classify.</p> : <div className="book-entry-list">{bookEntries.map((entry) => <article key={entry.id}><span>{entry.time}</span><div><strong>{entry.book}</strong><p>{entry.description}</p></div><b>{entry.value}</b></article>)}</div>}
-                    <div className="ledger-rule"><strong>Reconciliation rule</strong><p>At closing, recorded cash should agree with cash on hand, inventory cards with physical stock, and the credit ledger with balances still owed.</p></div>
+                    <span className="eyebrow">The books on Amina&apos;s desk</span><h2>Does the paper match the shop?</h2>
+                    <div className="books-summary"><div><span>🪙</span><small>Notes in cash tin</small><strong>{formatCash(metrics.cash)}</strong></div><div><span>📦</span><small>Items Amina can count</small><strong>{totalInventory} units</strong></div><div><span>🤝</span><small>Rehema&apos;s promise</small><strong>{formatCash(ledgerExposure)}</strong></div><div><span>✓</span><small>Marks made today</small><strong>{bookEntries.length}</strong></div></div>
+                    {bookEntries.length === 0 ? <p className="empty-state">The opening balances are written. The next receipt or stock slip will leave a new mark on these pages.</p> : <div className="book-entry-list">{bookEntries.map((entry) => <article key={entry.id}><span>{entry.time}</span><div><strong>{entry.book}</strong><p>{entry.description}</p></div><b>{entry.value}</b></article>)}</div>}
+                    <div className="ledger-rule"><strong>Before Amina locks the door</strong><p>The notes in the tin should match the cash book. The packets on the shelf should match the blue cards. Rehema&apos;s promise should match both copies of the agreement.</p></div>
                   </>
                 )}
 
                 {toolPanel === "coach" && (
                   <>
-                    <span className="eyebrow">Guided learning</span><h2>The ALP Coach connects the current choice</h2>
-                    {deskGuidance ? <div className="coach-tool-guide"><small>{deskGuidance.lesson}</small><article><b>What you know</b><p>{deskGuidance.know}</p></article><article><b>What to consider</b><p>{deskGuidance.consider}</p></article><article><b>What to record</b><p>{deskGuidance.record}</p></article></div> : <p className="empty-state">The market day is complete. Use the closing scorecard to compare outcomes across the whole day.</p>}
-                    <p className="uncertainty-note">The Coach appears automatically after each request. It teaches the decision logic but leaves the trade-off to the player.</p>
+                    <span className="eyebrow">A voice from the ALP training</span><h2>Coach Zawadi sees the next connection</h2>
+                    {deskGuidance ? <div className="coach-tool-guide"><small>{deskGuidance.lesson}</small><article><b>👀 Look at the counter</b><p>{deskGuidance.know}</p></article><article><b>↪ Think one step ahead</b><p>{deskGuidance.consider}</p></article><article><b>✎ Leave a paper trail</b><p>{deskGuidance.record}</p></article></div> : <p className="empty-state">The road outside is quiet again. Coach Zawadi is waiting in the closing reflection.</p>}
+                    <p className="uncertainty-note">Zawadi will point out what matters, but she will not make Amina&apos;s choice for her.</p>
                   </>
                 )}
 
-                {toolPanel === "notebook" && <><span className="eyebrow">Amina&apos;s field notebook</span><h2>Ideas discovered through play</h2><div className="notebook-list">{unlockedNotes.map((id, index) => <article key={id}><span>{index + 1}</span><div><strong>{NOTEBOOK[id].title}</strong><p>{NOTEBOOK[id].copy}</p></div></article>)}</div></>}
+                {toolPanel === "notebook" && <><span className="eyebrow">Amina&apos;s field notebook</span><h2>Things worth remembering tomorrow</h2><div className="notebook-list">{unlockedNotes.map((id, index) => <article key={id}><span>{index + 1}</span><div><strong>{NOTEBOOK[id].title}</strong><p>{NOTEBOOK[id].copy}</p></div></article>)}</div></>}
               </div>
             </div>
           )}
@@ -1131,25 +1212,25 @@ export default function Home() {
           {phase === "ending" && (
             <div className="screen-overlay ending-screen">
               <div className="ending-card pixel-panel">
-                <div className="score-hero"><div className="score-seal"><strong>{balancedScore}</strong><span>/ 100</span></div><div><span className="ending-badge">Market day complete</span><h1>{scoreGrade}</h1><p>A balanced result rewards farmer value, accurate books, stewardship, responsible risk decisions, and time—not cash alone.</p></div></div>
+                <div className="score-hero"><div className="score-seal"><strong>{balancedScore}</strong><span>/ 100</span></div><div><span className="ending-badge">The shutters are down</span><h1>{scoreGrade}</h1><p>No single number can tell the whole story. This one shows where Amina helped people, kept the shop honest, and carried her promises through the day.</p></div></div>
                 <div className="score-breakdown" aria-label="Balanced Centre Score breakdown">
-                  <div><span>🤝</span><small>Farmer value</small><strong>{farmerScore}<em>/20</em></strong></div>
-                  <div><span>📒</span><small>Bookkeeping</small><strong>{bookkeepingScore}<em>/25</em></strong></div>
-                  <div><span>📦</span><small>Stewardship</small><strong>{stewardshipScore}<em>/20</em></strong></div>
-                  <div><span>🛡️</span><small>Risk</small><strong>{riskScore}<em>/20</em></strong></div>
-                  <div><span>⏰</span><small>Time</small><strong>{timeScore}<em>/15</em></strong></div>
+                  <div><span>🤝</span><small>Farmers helped</small><strong>{farmerScore}<em>/20</em></strong></div>
+                  <div><span>📒</span><small>Books kept</small><strong>{bookkeepingScore}<em>/25</em></strong></div>
+                  <div><span>📦</span><small>Shop kept steady</small><strong>{stewardshipScore}<em>/20</em></strong></div>
+                  <div><span>🛡️</span><small>Risks handled</small><strong>{riskScore}<em>/20</em></strong></div>
+                  <div><span>⏰</span><small>Made the demo</small><strong>{timeScore}<em>/15</em></strong></div>
                 </div>
-                <div className="closing-books"><span>✓</span><div><strong>Closing reconciliation complete</strong><p>{bookEntries.length} entries posted · {bookkeepingMistakes === 0 ? "Every record matched on the first attempt" : `${mistakenEntryIds.length} ${mistakenEntryIds.length === 1 ? "record needed" : "records needed"} an ALP Coach correction`} · Cash, stock, and customer credit records agree.</p></div></div>
-                <div className="achievement-row"><span>📒 Books Balanced</span>{flags.creditStructured && <span>🤝 Fair Credit Partner</span>}{flags.adviceChoice !== "sell" && <span>🌿 Responsible Adviser</span>}{demoLateMinutes === 0 && <span>⏰ On-Time Facilitator</span>}</div>
-                <div className="ending-stats"><div><span>Capital</span><strong>{formatCash(metrics.cash)}</strong></div><div><span>Trust</span><strong>{metrics.trust}%</strong></div><div><span>Stock left</span><strong>{totalInventory}</strong></div><div><span>Credit owed</span><strong>{formatCash(ledgerExposure)}</strong></div></div>
+                <div className="closing-books"><span>✓</span><div><strong>The cash tin, shelf, and books agree</strong><p>{bookEntries.length} marks made today · {bookkeepingMistakes === 0 ? "Amina chose every book on the first try" : `Coach Zawadi helped redirect ${mistakenEntryIds.length} ${mistakenEntryIds.length === 1 ? "paper slip" : "paper slips"}`}.</p></div></div>
+                <div className="achievement-row"><span>📒 Honest Books</span>{flags.creditStructured && <span>🤝 Clear Promise</span>}{flags.adviceChoice !== "sell" && <span>🌿 Farmer First</span>}{demoLateMinutes === 0 && <span>⏰ Beat the Bell</span>}</div>
+                <div className="ending-stats"><div><span>Notes in cash tin</span><strong>{formatCash(metrics.cash)}</strong></div><div><span>Neighbour trust</span><strong>{metrics.trust}%</strong></div><div><span>Items on shelf</span><strong>{totalInventory}</strong></div><div><span>Rehema owes</span><strong>{formatCash(ledgerExposure)}</strong></div></div>
                 <div className="community-return">
-                  <article><span>🧑🏾‍🌾</span><div><strong>Rashidi</strong><p>{flags.rashidiQuantity === 5 ? "He planted with the full amount he requested, but five packs left the shelf early." : flags.rashidiQuantity ? `He adjusted his plan after receiving ${flags.rashidiQuantity} packs instead of five.` : "He left without seed and may try another retailer next time."}</p></div></article>
+                  <article><span>🧑🏾‍🌾</span><div><strong>Rashidi</strong><p>{flags.rashidiQuantity === 5 ? "By sunset, all five packs are beside his nursery beds. He is pleased—but the empty space they left followed Amina into the afternoon." : flags.rashidiQuantity ? `He draws ${flags.rashidiQuantity} nursery beds instead of five and sends Amina a photo before the rain.` : "His folded notes never left his pocket. He asks Amina to call before the next rain if seed returns."}</p></div></article>
                   <article><span>👩🏿‍🌾</span><div><strong>Mama Rehema</strong><p>{creditOutcome}</p></div></article>
                   <article><span>🧑🏾‍🌾</span><div><strong>Juma</strong><p>{adviceOutcome}</p></div></article>
                   <article><span>👩🏾</span><div><strong>Neema and the demo group</strong><p>{demoLateMinutes > 0 ? `The group began without Amina and waited ${demoLateMinutes} minutes for her. ` : "Amina welcomed the group on time. "}{flags.neemaQuantity === 2 ? "The two interested farmers also leave with seed." : flags.neemaQuantity ? `Only ${flags.neemaQuantity} of the two farmers can take seed today.` : "No seed remains for the interested farmers."}</p></div></article>
                 </div>
-                <div className="ending-reflection"><span className="eyebrow">ALP Coach reflection</span><p>Which early choice changed the most later conversations: the first seed sale, the credit package, or the time spent checking Juma&apos;s problem?</p></div>
-                <div className="ending-actions"><button className="primary-button share-button" type="button" onClick={shareScore}>{scoreCopied ? "Result ready to share ✓" : "Share my result"}</button><button className="primary-button" type="button" onClick={replay}>Replay differently ↻</button></div>
+                <div className="ending-reflection"><span className="eyebrow">Coach Zawadi asks</span><p>Which moment stayed with you: Rashidi&apos;s folded notes, Rehema&apos;s written promise, Juma&apos;s wrapped leaf, or the farmers waiting at the model plot?</p></div>
+                <div className="ending-actions"><button className="primary-button share-button" type="button" onClick={shareScore}>{scoreCopied ? "Market day ready to share ✓" : "Share this market day"}</button><button className="primary-button" type="button" onClick={replay}>Lift the shutters again ↻</button></div>
               </div>
             </div>
           )}
